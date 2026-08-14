@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Abogado Virtual" }]
-keywords = ["mcp", "rgpd", "gdpr", "anonimizacion", "legal", "privacidad"]
+keywords = ["mcp", "rgpd", "gdpr", "anonimizacion", "legal", "privacidad", "legal-ai"]
 
 dependencies = [
     "mcp>=1.2.0",
@@ -23,7 +23,7 @@ dependencies = [
 dev = ["pytest>=8.0"]
 
 [project.scripts]
-velum-mcp = "velum.server:main"
+velum-mcp = "velum.secure_server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/velum"]
