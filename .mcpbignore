@@ -1,0 +1,38 @@
+# Entorno y cachés
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+server/lib/
+server/venv/
+
+# Control de versiones y desarrollo
+.git/
+.github/
+.gitignore
+.DS_Store
+tests/
+dist/
+build/
+*.egg-info/
+*.mcpb
+
+# Documentación de arquitectura: vive en el repositorio, no en el bundle
+docs/
+
+# Salvaguarda: ningún expediente entra jamás en el paquete
+casos/
+expedientes/
+clientes/
+*.docx
+*.doc
+*.pdf
+*.rtf
+*.odt
+*.xlsx
+*_anonimizado*
+*_equivalencias*
+*_acta*

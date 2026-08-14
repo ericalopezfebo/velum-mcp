@@ -60,6 +60,7 @@ except ImportError:  # pragma: no cover
 
 mcp = _Servidor(
     "velum",
+    version=__version__,
     instructions=(
         "VELUM by Abogado Virtual quita los datos personales de documentos jurídicos "
         "en el propio ordenador del usuario, sin IA y sin llamadas externas.\n\n"
