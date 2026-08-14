@@ -1,230 +1,238 @@
 # VELUM by Abogado Virtual
 
-**Legal Document Anonymization & Privacy MCP**
+**Legal Document Anonymization & Privacy MCP for lawyers**
 
-Quita los datos personales de escritos jurídicos **en el propio ordenador**. Sin
-modelo de lenguaje, sin llamadas de red y sin conservar copias: el expediente no
-sale del equipo y no entra en la conversación con la IA.
+VELUM is a **local-first MCP server for legal documents**. Its purpose is to help lawyers protect confidential client information before using an external AI system such as ChatGPT, Claude, or another model.
 
+VELUM is **not** the Puerto Rico jurisprudence search MCP. That is a separate project: [mcp-puerto-rico-sentencias](https://github.com/ericalopezfebo/mcp-puerto-rico-sentencias).
+
+## The core privacy model
+
+```text
+Original client document
+        |
+        v
+   VELUM running locally
+        |
+        +-- local extraction
+        +-- deterministic redaction
+        +-- custom substitutions
+        +-- local sanitized copy
+        |
+        v
+ Human review by the lawyer
+        |
+        v
+Only the material the lawyer chooses to share
+        |
+        v
+ ChatGPT / Claude / another AI service
 ```
-Que D. Juan Antonio Pérez Molina, con DNI 45.892.113-Y y domicilio en la calle
-Serrano n.º 47, 28001 Madrid, interpone demanda frente a Inversiones Delta Sur,
-S.L., CIF B-87456323, por la transferencia de 34.500 € ordenada el 12 de marzo
-de 2024 a la cuenta ES91 2100 0418 4502 0005 1332. Artículos 1101 y 1124 CC.
-                                   ↓
-Que D. [ACTOR_1], con DNI [DNI_1] y domicilio en la [DIRECCION_1], interpone
-demanda frente a [EMPRESA_1], CIF [CIF_1], por la transferencia de 34.500 €
-ordenada el 12 de marzo de 2024 a la cuenta [IBAN_1]. Artículos 1101 y 1124 CC.
+
+VELUM is designed so that **the original document is processed on the lawyer's own computer**. The privacy tools do not require a VELUM cloud account, a VELUM database, or a VELUM server to process a document.
+
+### What VELUM does not promise
+
+VELUM cannot control what a lawyer subsequently sends to an outside AI provider. If a tool returns sanitized text and the lawyer sends that text to ChatGPT or Claude, that text leaves the lawyer's computer and is handled by that provider.
+
+VELUM also does **not** guarantee that every possible identifier, fact pattern, or combination of facts will be detected automatically. Legal documents require human review.
+
+The intended workflow is therefore:
+
+1. Keep the original client material locally.
+2. Process it with VELUM locally.
+3. Review the sanitization result.
+4. Add custom redactions where necessary.
+5. Share only the minimum information the lawyer has decided is appropriate for the intended AI task.
+
+## Why this is designed for legal practice
+
+VELUM is a technical privacy tool. It does not make the legal or ethical decision for the lawyer.
+
+For Puerto Rico lawyers, the design is intended to support careful handling of confidential client information in light of the **Puerto Rico Rules of Professional Conduct**, including the duties concerning confidentiality, competence, communication, and supervision. Lawyers should also evaluate the applicable Puerto Rico Rules of Evidence, court orders, protective orders, discovery obligations, and any matter-specific confidentiality restrictions before using AI.
+
+For lawyers following the **ABA Model Rules of Professional Conduct**, the relevant considerations include, among others, **Model Rule 1.1 (competence), Comment [8] concerning technology and continuing learning, Rule 1.6 (confidentiality), Rule 1.4 (communication), Rule 5.1 (supervision of lawyers), and Rule 5.3 (supervision of nonlawyer assistance)**. The precise obligations depend on the circumstances and the lawyer's jurisdiction.
+
+VELUM does not establish that a particular use of AI is ethically permissible. It is intended to reduce one technical risk: unnecessarily exposing the original client document before the lawyer has reviewed and controlled what will be shared.
+
+## Local security boundary
+
+The privacy tools are designed around a local document root configured with `VELUM_RAICES`.
+
+The implementation is intended to enforce these boundaries:
+
+- Documents are read from authorized local roots.
+- Relative paths and path traversal are rejected.
+- Symbolic-link escapes are rejected.
+- The original document is not modified by anonymization.
+- Sanitized copies are written locally.
+- The original document is not returned as the result of document-anonymization tools.
+- No LLM is used to decide what to redact.
+- No OpenAI, Anthropic, or other AI API is required for the local anonymization engine.
+- Privacy processing does not require an HTTP listener.
+
+These are **technical properties of the implementation, not legal guarantees**.
+
+## What gets replaced and what should normally be preserved
+
+VELUM is intended to redact information that identifies a client, witness, opposing party, or other person or entity when the lawyer decides that information is unnecessary for the AI task.
+
+Typical targets include:
+
+- names and aliases;
+- government identifiers;
+- Social Security numbers;
+- driver's-license and passport identifiers;
+- addresses;
+- telephone numbers and email addresses;
+- bank-account and payment-card information;
+- identifying corporate information;
+- other personally identifying information selected by the lawyer.
+
+VELUM should generally preserve the legal substance needed for the task, such as:
+
+- amounts and damages;
+- dates material to the facts;
+- statutes and rules;
+- legal citations;
+- court names;
+- procedural posture;
+- case numbers when the lawyer determines they are not themselves confidential;
+- the factual and legal structure of the document.
+
+**Preservation is not automatic permission to disclose.** A lawyer must decide whether any particular fact, citation, case number, or combination of facts could identify a client or confidential matter.
+
+## Puerto Rico example
+
+Original:
+
+```text
+La demandante María Rivera López, residente en San Juan, Puerto Rico,
+identifica en su contestación a la demanda la cuenta bancaria utilizada para
+recibir el pago y describe la relación contractual con ABC Caribe, Inc.
 ```
 
-El importe, la fecha de los hechos y las citas legales no se tocan. Son el fondo
-del asunto, no el dato del cliente.
+Sanitized example:
 
----
+```text
+La demandante [ACTORA_1], residente en [MUNICIPIO_1], Puerto Rico,
+identifica en su contestación a la demanda la cuenta bancaria utilizada para
+recibir el pago y describe la relación contractual con [EMPRESA_1].
+```
 
-## Por qué
+The objective is **not** to erase the legal theory or factual issue. The objective is to remove unnecessary identifying information while preserving enough context for the intended legal/AI task.
 
-Un expediente pegado en el chat de una IA de consumo se trata fuera del control
-del despacho y sin contrato de encargado del tratamiento. Eso choca con los
-artículos 28 y 44 del RGPD y con el deber de secreto profesional.
+For a real Puerto Rico filing, the lawyer should review the entire result for indirect identifiers, unique facts, names embedded in exhibits, captions, footnotes, signatures, metadata, and other context that could re-identify a person.
 
-VELUM lo resuelve por la vía más simple: si el documento ya no lleva datos
-personales dentro, deja de haber tratamiento que proteger.
+## Anonymization vs. pseudonymization
 
-**No hay «procesamiento en servidores europeos» porque no hay procesamiento
-fuera de su máquina.** La detección es determinista y auditable —reglas,
-dígitos de control y léxico jurídico—, y eso se puede comprobar leyendo el
-código: no hay una sola llamada de red.
+A replacement such as `[CLIENTE_1]` is useful for an AI workflow, but terminology matters.
 
----
+If a lawyer keeps a separate mapping that can reconnect `[CLIENTE_1]` to the real person, the resulting process may be better characterized as **pseudonymization** rather than irreversible anonymization. The lawyer should therefore control and protect any mapping table separately.
 
-## Garantías, y cómo se imponen
+VELUM should not be described as making a document legally anonymous merely because it replaced a few names or identifiers.
 
-| Promesa | Cómo se impone |
-| --- | --- |
-| El documento no sale del equipo | Sin dependencias de red. Auditable en `src/velum/`. |
-| El documento no entra en la conversación | `seguridad/salida.py` reconstruye cada respuesta desde su modelo público y bloquea cualquier clave de contenido. Si algo se filtrara, la respuesta no llega a emitirse. |
-| Solo se abre lo autorizado | `seguridad/rutas.py`: raíces declaradas en `VELUM_RAICES`; se rechazan rutas relativas, travesías `..` y enlaces simbólicos. |
-| El fichero es lo que dice ser | `seguridad/limites.py`: firma mágica coherente con la extensión y tamaño máximo. |
-| Los errores no filtran nada | `seguridad/errores.py`: códigos cerrados y plantillas escritas de antemano. Ningún mensaje deriva de la entrada ni de una excepción. |
+## Tools
 
-Las pruebas de `tests/test_seguridad.py` lo comprueban con canarios: si un
-nombre, un DNI o un CIF apareciera en la respuesta de una herramienta
-documental, la prueba falla.
+The MCP exposes privacy-oriented tools such as:
 
----
+| Tool | Purpose | Returns original document content? |
+| --- | --- | --- |
+| `estado` | Reports local runtime/security configuration | No |
+| `revisar_texto` | Inspects supplied text for detectable identifiers | No original file |
+| `revisar_documento` | Reviews a local document | No |
+| `revisar_carpeta` | Reviews authorized local documents | No |
+| `anonimizar_texto` | Applies local redactions to supplied text | Sanitized text |
+| `anonimizar_documento` | Creates a sanitized local document | No original document content |
+| `anonimizar_carpeta` | Creates sanitized local copies | No original document content |
 
-## Qué se sustituye y qué se respeta
+The exact tool schemas and supported categories are defined by the code and tests in this repository.
 
-| Se sustituye | Se respeta intacto |
-| --- | --- |
-| Nombres y apellidos | Importes y cuantías |
-| DNI, NIE, CIF, pasaporte, NSS, SSN | Fechas de los hechos |
-| Direcciones postales | Artículos, leyes y reglas citadas |
-| IBAN y tarjetas | Juzgados y tribunales |
-| Teléfonos y correos | Números de procedimiento, autos y rollo |
-| Matrículas y referencias catastrales | ECLI, ROJ, TSPR, DPR, KLAN |
-| Denominaciones sociales | Estilos, tablas, notas y numeración |
-| Datos del artículo 9 del RGPD | El relato de los hechos y los fundamentos |
-
-Las fechas se conservan de serie: en un escrito jurídico suelen ser el hilo del
-relato y borrarlas lo deja inservible.
-
----
-
-## Instalación
+## Installation
 
 ```bash
-git clone <url-del-repositorio> velum-mcp
+git clone https://github.com/ericalopezfebo/velum-mcp.git
 cd velum-mcp
-python3 -m venv .venv && ./.venv/bin/pip install -e .
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
 ```
 
-Python 3.10 o superior.
+Python 3.10+ is required.
 
-### Claude Desktop
+Create a local document root:
 
-En `claude_desktop_config.json`:
+```bash
+mkdir -p ~/Documents/VELUM
+export VELUM_RAICES="$HOME/Documents/VELUM"
+```
+
+The local MCP server uses `stdio`; it does not need a public HTTP server to perform local anonymization.
+
+## Claude Desktop / other local MCP clients
+
+A local MCP client can launch the VELUM executable directly. Configure the client to use the executable from your virtual environment and set `VELUM_RAICES` to the directory containing the documents the lawyer has intentionally authorized.
+
+Example:
 
 ```json
 {
   "mcpServers": {
     "velum": {
-      "command": "/ruta/absoluta/a/velum-mcp/.venv/bin/velum-mcp",
+      "command": "/ABSOLUTE/PATH/TO/velum-mcp/.venv/bin/velum-mcp",
       "env": {
-        "VELUM_RAICES": "/Users/usuario/Documents/Casos",
-        "VELUM_JURISDICCION": "PUERTO_RICO"
+        "VELUM_RAICES": "/Users/USER/Documents/VELUM"
       }
     }
   }
 }
 ```
 
-`VELUM_RAICES` es obligatorio en la práctica: VELUM solo abre ficheros situados
-dentro de esas carpetas. Se pueden indicar varias separadas por `:`. Si no se
-declara, se usa `~/Documents`.
+A local MCP connection is different from a remote MCP connection. The fact that VELUM runs locally does not mean that content subsequently returned to an external AI provider stays local.
 
-`VELUM_JURISDICCION` admite `ESPANA` (por defecto) o `PUERTO_RICO`.
+## ChatGPT and external AI systems
 
-### Claude Code
+VELUM's local privacy boundary is independent of the connection mechanism used by an AI client.
 
-```bash
-claude mcp add velum -e VELUM_RAICES=/ruta/a/casos -- /ruta/a/.venv/bin/velum-mcp
-```
+If an AI client can launch a local MCP by `stdio`, VELUM can run as a local process. If a product requires a separate connection mechanism to reach a local MCP, that connection mechanism must be evaluated separately.
 
----
+**Do not describe VELUM as preventing all information from reaching an AI provider.** The correct statement is that VELUM is designed to process the original document locally and to give the lawyer an opportunity to sanitize and review the material before deciding what to send to an external AI service.
 
-## Herramientas
+## Limitations
 
-| Tool | Qué hace | ¿Devuelve contenido? |
-| --- | --- | --- |
-| `estado` | Conexión, jurisdicción y carpetas autorizadas | — |
-| `revisar_texto` | Qué datos hay en un texto pegado | No |
-| `revisar_documento` | Qué datos hay en un fichero | **No** |
-| `revisar_carpeta` | Recuento por fichero de una carpeta | **No** |
-| `anonimizar_texto` | Sustituye en un texto pegado | Sí, el texto ya anonimizado |
-| `anonimizar_documento` | Anonimiza un fichero | **No**: devuelve rutas |
-| `anonimizar_carpeta` | Anonimiza una carpeta | **No**: devuelve rutas |
+- No automated detector catches every personal or confidential fact.
+- Names and identifiers expressed indirectly may require custom rules.
+- Unique factual combinations can identify a person even after obvious identifiers are removed.
+- Exhibits, attachments, headers, footers, signatures, comments, document metadata, and images may require separate review depending on the file format and implementation.
+- Legal privilege and confidentiality are legal questions; VELUM cannot determine whether a particular disclosure waives a privilege or violates a professional rule.
+- A sanitized document can still contain confidential or identifying information.
 
-**Modos:** `token` (`[ACTOR_1]`, por defecto), `seudonimo` (nombres falsos
-coherentes), `redaccion` (tachado ███), `hash` (etiqueta con huella estable
-entre documentos).
+## Tests
 
-**Categorías:** `identificadores`, `contacto`, `economicos`, `bienes`,
-`nombres`, `empresas`, `sensibles`.
-
----
-
-## Qué se entrega
-
-Por cada documento, tres ficheros junto al original —que **no se modifica**:
-
-- `nombre_anonimizado.docx` — mismo formato, mismo aspecto.
-- `nombre_anonimizado_acta.json` y `.md` — fecha, huella SHA-256 del original,
-  recuento por tipo, método y control de calidad. Sin ningún dato personal.
-- `nombre_anonimizado_equivalencias.xlsx` — qué etiqueta sustituyó a qué dato.
-
-> **Anonimizar y seudonimizar no son lo mismo.** Si conserva la tabla de
-> equivalencias, jurídicamente lo hecho es **seudonimización** (art. 4.5 RGPD) y
-> el documento sigue siendo dato personal para quien tenga acceso a esa tabla.
-> Por eso el fichero es opcional y lleva el aviso dentro. Para anonimización en
-> sentido estricto, llame con `generar_equivalencias: false`.
-
----
-
-## Jurisdicciones
-
-Se elige al instalar, o con `VELUM_JURISDICCION`. Un perfil **amplía** el léxico
-base, nunca lo sustituye.
-
-**España** (`ESPANA`, por defecto). DNI, NIE y CIF con letra de control; IBAN con
-mod 97; NSS; matrícula; referencia catastral; formas societarias peninsulares.
-Preserva artículos, leyes, ECLI y ROJ.
-
-**Estados Unidos** (`ESTADOS_UNIDOS`). SSN —rechazando los bloques nunca
-emitidos—, EIN con prefijo de campus real, número de ruta bancaria ABA con su
-dígito de control, licencia de conducir, MRN e identificador de Medicare,
-teléfonos y direcciones en formato norteamericano con ZIP+4.
-
-Preserva el aparato de citación completo: `U.S.C.`, `C.F.R.`, los reporteros
-federales y regionales (`U.S.`, `S. Ct.`, `F.3d`, `F. Supp. 2d`, `N.E.3d`,
-`P.3d`, `A.3d`, `So. 3d`…), `Fed. R. Civ. P.`, números de caso y de expediente,
-tribunales y agencias.
-
-Y preserva **los nombres de caso citados**. Esto último importa más de lo que
-parece: en `Bell Atlantic Corp. v. Twombly, 550 U.S. 544 (2007)`, «Bell Atlantic
-Corp.» es la autoridad en la que se apoya el argumento, no una parte del pleito.
-Anonimizarla arruinaría el escrito. VELUM la reconoce por la cita de reportero
-que la sigue.
-
-**Puerto Rico** (`PUERTO_RICO`). Se apila **sobre** el perfil estadounidense, no
-en su lugar: el Distrito de Puerto Rico es un foro federal y las apelaciones van
-al Primer Circuito, de modo que un mismo escrito cita el Código Civil de Puerto
-Rico junto a 42 U.S.C. § 1983 sin pestañear.
-
-Añade licencia de conducir local, teléfonos 787/939 y direcciones con
-urbanización, barrio, sector y apartado. Preserva `KLAN`, `KLCE`, `KLRA`,
-`TSPR`, `DPR`, `LPRA`, `Civil Núm.`, las Reglas de Procedimiento Civil y los
-foros locales, incluida la CASP.
-
----
-
-## Limitaciones, dichas sin adornos
-
-- **No detecta el cien por cien de los datos personales**, y ninguna herramienta
-  lo hace. Un dato puede escaparse por una transcripción defectuosa, por una
-  redacción inusual o por ser un dato indirecto que solo identifica en contexto.
-- **Sin IA, la cobertura de nombres en prosa libre es menor.** Se detecta con
-  tratamiento (`D. Fulano`), con léxico de nombres de pila o por coreferencia
-  con un nombre ya identificado. Un apellido suelto y desconocido puede pasar.
-- **No se admite PDF.** Los ficheros PDF se enumeran pero no se abren. La
-  redacción seria exige eliminar los glifos del fichero, no pintar un rectángulo
-  encima; la decisión de dependencia está documentada en
-  `docs/PDF_DEPENDENCY_EVALUATION.md` y aún no está tomada.
-- **Notas al pie:** la sustitución se hace nodo a nodo, de modo que un dato
-  partido entre dos nodos puede escapar. El control de calidad lo señala.
-
----
-
-## Pruebas
+Run:
 
 ```bash
-PYTHONPATH=src ./.venv/bin/python -m pytest tests -q
+python3 -m pytest -q
 ```
 
----
+The test suite is intended to verify the technical privacy boundary, path restrictions, deterministic redaction behavior, and output-safety properties. Passing tests do not constitute a legal or ethical certification.
 
-## Procedencia
+## Security reporting
 
-Dos modelos recibieron la misma tarea. El motor de anonimización, el servidor
-MCP y el manejo documental proceden de la implementación de Claude. La frontera
-de seguridad —raíces autorizadas, sanitizador de salida, códigos de error
-cerrados, validación de firma— y el perfil de Puerto Rico proceden del
-esqueleto de arquitectura de Codex. La documentación de `docs/` es suya.
+See [`SECURITY.md`](SECURITY.md) for responsible disclosure information.
 
----
+## Separate Puerto Rico jurisprudence project
 
-Ninguna herramienta detecta el cien por cien de los datos personales. La revisión
-del documento antes de aportarlo, remitirlo o publicarlo corresponde al
-profesional, que conserva su deber de secreto y su responsabilidad bajo el RGPD
-y la LOPDGDD.
+VELUM and the Puerto Rico jurisprudence search MCP are intentionally separate projects.
+
+**VELUM:** protects and prepares confidential legal documents locally.
+
+**mcp-puerto-rico-sentencias:** searches and retrieves public Puerto Rico judicial decisions.
+
+They should not be presented as the same product, repository, or security boundary.
+
+## Disclaimer
+
+VELUM is software for privacy-oriented document preparation. It is not legal advice, does not determine whether an AI workflow complies with a particular jurisdiction's professional-responsibility rules, and does not guarantee attorney-client privilege, work-product protection, confidentiality, or waiver prevention.
+
+The lawyer remains responsible for evaluating the specific client matter, applicable professional rules, court requirements, contracts, AI-provider terms, security controls, and the content actually shared with an AI system.
