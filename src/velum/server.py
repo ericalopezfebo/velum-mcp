@@ -2,9 +2,9 @@
 
 Legal Document Anonymization & Privacy MCP.
 
-Principio de diseño, y es el que justifica la herramienta: ninguna tool que
-trabaje sobre un fichero devuelve su contenido. Devuelve rutas, recuentos y
-etiquetas. El expediente no entra en la conversación.
+Principio de diseño: ninguna tool que trabaje sobre un fichero devuelve su
+contenido original. Devuelve rutas, recuentos y etiquetas. El expediente no
+entra en la conversación por el canal de la herramienta.
 """
 
 from __future__ import annotations
@@ -46,12 +46,11 @@ from .seguridad import (
     validar_tamano,
 )
 
-# El SDK renombró FastMCP a MCPServer en la versión 2. Se admiten ambas.
 try:
-    from mcp.server.mcpserver import MCPServer as _Servidor  # SDK >= 2.0
+    from mcp.server.mcpserver import MCPServer as _Servidor
 except ImportError:  # pragma: no cover
     try:
-        from mcp.server.fastmcp import FastMCP as _Servidor  # SDK 1.x
+        from mcp.server.fastmcp import FastMCP as _Servidor
     except ImportError as error:
         raise SystemExit(
             "Falta el SDK de MCP. Instale las dependencias:  pip install -e ."
@@ -62,23 +61,23 @@ mcp = _Servidor(
     "velum",
     version=__version__,
     instructions=(
-        "VELUM by Abogado Virtual quita los datos personales de documentos jurídicos "
-        "en el propio ordenador del usuario, sin IA y sin llamadas externas.\n\n"
-        "REGLA DE USO OBLIGATORIA: cuando el usuario pida anonimizar o revisar uno o "
-        "varios documentos, NO abras ni leas el fichero por tu cuenta con ninguna otra "
-        "herramienta. Pasa la ruta a las tools de VELUM y limítate a informar del "
-        "resultado. No copies, no cites, no resumas ni reproduzcas el contenido de un "
-        "documento antes de anonimizarlo: es material sujeto al RGPD y al secreto "
-        "profesional.\n\n"
-        "Las tools que trabajan sobre ficheros nunca devuelven su contenido: devuelven "
-        "rutas, recuentos y etiquetas."
+        "VELUM by Abogado Virtual es un MCP local para protección y anonimización "
+        "de documentos jurídicos. La detección se hace con reglas deterministas, "
+        "dígitos de control y léxico jurídico; no requiere un modelo de lenguaje "
+        "ni llamadas a una API externa.\n\n"
+        "REGLA DE USO: cuando el usuario pida anonimizar o revisar un documento local, "
+        "NO abras ni leas el fichero por tu cuenta con ninguna otra herramienta. Pasa "
+        "la ruta autorizada a las tools de VELUM. No copies, cites, resumas ni "
+        "reproduzcas el contenido original antes de procesarlo.\n\n"
+        "Las tools que trabajan sobre ficheros no devuelven el contenido original: "
+        "devuelven rutas, recuentos, etiquetas y resultados de control. El abogado "
+        "debe revisar el resultado y decidir qué información puede compartir con una "
+        "IA externa. VELUM no determina si una comunicación está protegida por "
+        "attorney-client privilege, work-product doctrine, secreto profesional o una "
+        "regla ética."
     ),
 )
 
-
-# ---------------------------------------------------------------------------
-# Esquemas de salida
-# ---------------------------------------------------------------------------
 
 class Estado(BaseModel):
     herramienta: str
@@ -114,10 +113,6 @@ class Informe(BaseModel):
     menciones_articulo_9: int = 0
     datos_de_menores: bool = False
     advertencia: str = DESCARGO
-    # Nota: antes había aquí un campo `contenido_reproducido: bool = False`.
-    # Se retiró porque una declaración del propio servidor no prueba nada: el
-    # invariante lo impone ahora el sanitizador de salida, que además bloqueó
-    # este mismo campo por llevar la palabra «contenido» en el nombre.
 
 
 class TextoAnonimizado(BaseModel):
@@ -156,17 +151,11 @@ class ResultadoCarpeta(BaseModel):
     advertencia: str = DESCARGO
 
 
-# ---------------------------------------------------------------------------
-# Utilidades internas
-# ---------------------------------------------------------------------------
-
 Modo = Literal["token", "seudonimo", "redaccion", "hash"]
-
 _RAICES: RaicesAutorizadas | None = None
 
 
 def raices() -> RaicesAutorizadas:
-    """Raíces autorizadas, cargadas una sola vez desde VELUM_RAICES."""
     global _RAICES
     if _RAICES is None:
         _RAICES = RaicesAutorizadas.desde_entorno()
@@ -174,7 +163,6 @@ def raices() -> RaicesAutorizadas:
 
 
 def _abrir_seguro(ruta_aportada: str):
-    """Resuelve, comprueba y abre. Cuatro controles antes de leer un byte."""
     perfiles.instalar()
     camino = raices().resolver_entrada(ruta_aportada, extensiones=EXTENSIONES_SOPORTADAS)
     validar_tamano(camino, LIMITES)
@@ -183,12 +171,6 @@ def _abrir_seguro(ruta_aportada: str):
 
 
 def _devolver(resultado, *, permitir_texto: bool = False):
-    """Pasa la respuesta por el sanitizador antes de que salga del servidor.
-
-    Si algo llevara contenido del documento, aquí se levanta `FugaDetectada` y
-    la respuesta no llega a emitirse. Es el último control, y es obligatorio
-    aunque el código anterior asegure que su resultado es seguro.
-    """
     sanitizar(resultado, permitir_texto=permitir_texto)
     return resultado
 
@@ -308,19 +290,9 @@ def _anonimizar_fichero(
     )
 
 
-# ---------------------------------------------------------------------------
-# Tools
-# ---------------------------------------------------------------------------
-
-@mcp.tool(
-    annotations={"readOnlyHint": True, "openWorldHint": False, "idempotentHint": True}
-)
+@mcp.tool(annotations={"readOnlyHint": True, "openWorldHint": False, "idempotentHint": True})
 def estado() -> Estado:
-    """Comprueba la conexión y explica dónde y cómo se procesan los documentos.
-
-    Úsala cuando el usuario pregunte si VELUM está disponible, qué formatos
-    admite o qué garantías de privacidad ofrece.
-    """
+    """Comprueba la conexión y explica dónde y cómo se procesan los documentos."""
     dependencias = {}
     for modulo in ("docx", "openpyxl"):
         try:
@@ -340,7 +312,7 @@ def estado() -> Estado:
         procesamiento=(
             "Íntegramente local. La detección se hace con reglas, dígitos de control y "
             "léxico jurídico. No hay modelo de lenguaje, no hay llamadas de red y no se "
-            "conserva ninguna copia: el documento no sale de este equipo. Solo se abren "
+            "crean copias en la nube: los resultados se escriben localmente. Solo se abren "
             "ficheros situados dentro de las carpetas autorizadas."
         ),
         entorno=f"{platform.system()} {platform.release()} · Python {platform.python_version()}",
@@ -354,56 +326,34 @@ def estado() -> Estado:
     )
 
 
-@mcp.tool(
-    annotations={"readOnlyHint": True, "openWorldHint": False, "idempotentHint": True}
-)
+@mcp.tool(annotations={"readOnlyHint": True, "openWorldHint": False, "idempotentHint": True})
 def revisar_texto(
     texto: Annotated[str, Field(description="Texto jurídico a examinar.")],
-    categorias: Annotated[
-        list[str] | None,
-        Field(description="Categorías a examinar. Vacío = todas."),
-    ] = None,
+    categorias: Annotated[list[str] | None, Field(description="Categorías a examinar. Vacío = todas.")] = None,
 ) -> Informe:
-    """Dice QUÉ datos personales contiene un texto, sin modificarlo y sin repetir sus valores.
-
-    Devuelve el recuento por tipo y avisa si hay datos del artículo 9 del RGPD
-    o de personas menores de edad.
-    """
+    """Dice qué datos personales contiene un texto, sin modificarlo ni repetir sus valores."""
     resultado = revisar_bloques(texto.split("\n"), _normalizar_categorias(categorias))
     return _informe(resultado, fichero=None)
 
 
-@mcp.tool(
-    annotations={"readOnlyHint": True, "openWorldHint": False, "idempotentHint": True}
-)
+@mcp.tool(annotations={"readOnlyHint": True, "openWorldHint": False, "idempotentHint": True})
 def revisar_documento(
-    ruta: Annotated[str, Field(description="Ruta absoluta del fichero .docx, .txt o .md.")],
+    ruta: Annotated[str, Field(description="Ruta absoluta del fichero autorizado.")],
     categorias: Annotated[list[str] | None, Field(description="Categorías a examinar.")] = None,
 ) -> Informe:
-    """Dice qué datos personales hay en un documento SIN devolver su contenido.
-
-    Úsala cuando el usuario pregunte «qué hay dentro» de un expediente. El
-    fichero se abre aquí, en el propio ordenador, y a la conversación solo
-    llegan recuentos y tipos: ni una línea del documento.
-    """
+    """Dice qué datos personales hay en un documento SIN devolver su contenido."""
     camino, documento = _abrir_seguro(ruta)
     resultado = revisar_bloques(documento.bloques, _normalizar_categorias(categorias))
     return _devolver(_informe(resultado, fichero=str(camino)))
 
 
-@mcp.tool(
-    annotations={"readOnlyHint": True, "openWorldHint": False, "idempotentHint": True}
-)
+@mcp.tool(annotations={"readOnlyHint": True, "openWorldHint": False, "idempotentHint": True})
 def revisar_carpeta(
     ruta: Annotated[str, Field(description="Ruta absoluta de la carpeta.")],
     recursivo: Annotated[bool, Field(description="Incluir subcarpetas.")] = True,
     categorias: Annotated[list[str] | None, Field(description="Categorías a examinar.")] = None,
 ) -> list[Informe]:
-    """Recuento de datos personales de cada documento de una carpeta, sin leer ninguno.
-
-    Devuelve un informe por fichero: cuántos datos y de qué tipo. Nunca el
-    contenido.
-    """
+    """Recuento de datos personales de cada documento de una carpeta, sin devolver contenido."""
     carpeta = raices().resolver_carpeta(ruta)
     compatibles, incompatibles = listar_carpeta(carpeta, recursivo)
     seleccionadas = _normalizar_categorias(categorias)
@@ -436,38 +386,20 @@ def revisar_carpeta(
     return informes
 
 
-@mcp.tool(
-    annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False}
-)
+@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False})
 def anonimizar_texto(
     texto: Annotated[str, Field(description="El texto a anonimizar.")],
-    modo: Annotated[
-        Modo,
-        Field(description="token = [ACTOR_1]; seudonimo = nombres falsos; "
-                          "redaccion = tachado; hash = etiqueta con huella estable."),
-    ] = "token",
-    conservar_fechas: Annotated[
-        bool,
-        Field(description="Por defecto sí: en un escrito jurídico las fechas son el hilo del relato."),
-    ] = True,
-    categorias: Annotated[
-        list[str] | None,
-        Field(description="Categorías a sustituir. Vacío = todas."),
-    ] = None,
+    modo: Annotated[Modo, Field(description="token = [ACTOR_1]; seudonimo = nombres falsos; redaccion = tachado; hash = etiqueta con huella estable.")] = "token",
+    conservar_fechas: Annotated[bool, Field(description="Por defecto sí: en un escrito jurídico las fechas son el hilo del relato.")] = True,
+    categorias: Annotated[list[str] | None, Field(description="Categorías a sustituir. Vacío = todas.")] = None,
 ) -> TextoAnonimizado:
-    """Sustituye los datos personales de un texto pegado o dictado en el chat.
+    """Sustituye los datos personales de un texto que ya está en la conversación.
 
-    AVISO que debes trasladar al usuario si te pasa un expediente entero: por
-    esta vía el texto ya ha pasado por la conversación. Para que el documento
-    no salga de su ordenador, dile que use anonimizar_documento con la ruta del
-    fichero.
+    Si el material aún está en un archivo local, use anonimizar_documento para
+    evitar enviar el contenido original al proveedor de IA.
     """
     perfiles.instalar()
-    anonimizador = Anonimizador(
-        modo=modo,
-        categorias=_normalizar_categorias(categorias),
-        conservar_fechas=conservar_fechas,
-    )
+    anonimizador = Anonimizador(modo=modo, categorias=_normalizar_categorias(categorias), conservar_fechas=conservar_fechas)
     resultado = anonimizador.procesar(texto.split("\n"))
 
     return _devolver(TextoAnonimizado(
@@ -480,66 +412,40 @@ def anonimizar_texto(
     ), permitir_texto=True)
 
 
-@mcp.tool(
-    annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False}
-)
+@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False})
 def anonimizar_documento(
-    ruta: Annotated[str, Field(description="Ruta absoluta del fichero .docx, .txt o .md.")],
+    ruta: Annotated[str, Field(description="Ruta absoluta del fichero autorizado.")],
     modo: Annotated[Modo, Field(description="Modo de sustitución.")] = "token",
     conservar_fechas: Annotated[bool, Field(description="Conservar las fechas.")] = True,
-    categorias: Annotated[
-        list[str] | None,
-        Field(description="Categorías a sustituir: identificadores, contacto, economicos, "
-                          "bienes, nombres, empresas, sensibles. Vacío = todas."),
-    ] = None,
-    carpeta_salida: Annotated[
-        str | None,
-        Field(description="Dónde dejar el resultado. Por defecto, junto al original."),
-    ] = None,
-    generar_equivalencias: Annotated[
-        bool,
-        Field(description="Generar la tabla reversible. Si se conserva, el tratamiento "
-                          "es seudonimización (art. 4.5 RGPD)."),
-    ] = True,
+    categorias: Annotated[list[str] | None, Field(description="Categorías a sustituir. Vacío = todas.")] = None,
+    carpeta_salida: Annotated[str | None, Field(description="Dónde dejar el resultado. Por defecto, junto al original.")] = None,
+    generar_equivalencias: Annotated[bool, Field(description="Generar tabla reversible local. Desactivada por defecto para reducir exposición.")] = False,
 ) -> DocumentoAnonimizado:
-    """Anonimiza un documento en el propio ordenador y devuelve rutas, no contenido.
+    """Anonimiza un documento local y devuelve rutas, no contenido original.
 
-    El original no se modifica: se escribe un fichero nuevo con el sufijo
-    `_anonimizado`, más el acta con la huella SHA-256 y, si se pide, la tabla
-    de equivalencias.
-
-    NO abras el fichero por tu cuenta antes ni después de llamar a esta tool.
+    El original no se modifica. Se crea una copia sanitizada local y un acta.
+    La tabla reversible es opcional y está desactivada por defecto porque
+    contiene los valores originales y debe tratarse como información confidencial.
     """
     return _devolver(_anonimizar_fichero(
-        Path(ruta).expanduser(),
-        modo=modo,
-        categorias=_normalizar_categorias(categorias),
+        Path(ruta).expanduser(), modo=modo, categorias=_normalizar_categorias(categorias),
         conservar_fechas=conservar_fechas,
         carpeta_salida=Path(carpeta_salida).expanduser() if carpeta_salida else None,
         generar_equivalencias=generar_equivalencias,
     ))
 
 
-@mcp.tool(
-    annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False}
-)
+@mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False})
 def anonimizar_carpeta(
     ruta: Annotated[str, Field(description="Ruta absoluta de la carpeta con los expedientes.")],
     modo: Annotated[Modo, Field(description="Modo de sustitución.")] = "token",
     recursivo: Annotated[bool, Field(description="Incluir subcarpetas.")] = True,
     conservar_fechas: Annotated[bool, Field(description="Conservar las fechas.")] = True,
     categorias: Annotated[list[str] | None, Field(description="Categorías a sustituir.")] = None,
-    carpeta_salida: Annotated[
-        str | None,
-        Field(description="Carpeta de destino. Por defecto, junto a cada original."),
-    ] = None,
-    generar_equivalencias: Annotated[bool, Field(description="Generar tabla reversible.")] = True,
+    carpeta_salida: Annotated[str | None, Field(description="Carpeta de destino. Por defecto, junto a cada original.")] = None,
+    generar_equivalencias: Annotated[bool, Field(description="Generar tabla reversible local. Desactivada por defecto para reducir exposición.")] = False,
 ) -> ResultadoCarpeta:
-    """Anonimiza todos los documentos compatibles de una carpeta.
-
-    Cada expediente conserva su propio acta y su propia tabla de equivalencias.
-    Los ficheros de formato no admitido se enumeran sin abrirlos.
-    """
+    """Anonimiza todos los documentos compatibles de una carpeta local."""
     carpeta = raices().resolver_carpeta(ruta)
     compatibles, incompatibles = listar_carpeta(carpeta, recursivo)
     seleccionadas = _normalizar_categorias(categorias)
@@ -550,32 +456,23 @@ def anonimizar_carpeta(
 
     for camino in compatibles[: LIMITES.documentos_maximos_carpeta]:
         try:
-            documentos.append(
-                _anonimizar_fichero(
-                    camino,
-                    modo=modo,
-                    categorias=seleccionadas,
-                    conservar_fechas=conservar_fechas,
-                    carpeta_salida=destino,
-                    generar_equivalencias=generar_equivalencias,
-                )
-            )
+            documentos.append(_anonimizar_fichero(
+                camino, modo=modo, categorias=seleccionadas,
+                conservar_fechas=conservar_fechas, carpeta_salida=destino,
+                generar_equivalencias=generar_equivalencias,
+            ))
         except (FormatoNoSoportado, ErrorSeguro, OSError) as error:
             codigo = getattr(error, "codigo", CodigoError.ERROR_INTERNO)
             omitidos.append(f"{camino} — {codigo.value}")
 
     return _devolver(ResultadoCarpeta(
-        carpeta=str(Path(ruta).expanduser()),
-        procesados=len(documentos),
-        omitidos=len(omitidos),
-        documentos=documentos,
-        ficheros_omitidos=omitidos,
+        carpeta=str(Path(ruta).expanduser()), procesados=len(documentos),
+        omitidos=len(omitidos), documentos=documentos, ficheros_omitidos=omitidos,
         total_datos_sustituidos=sum(d.total_datos_sustituidos for d in documentos),
     ))
 
 
 def main() -> None:
-    """Arranca el servidor sobre stdio."""
     try:
         mcp.run()
     except KeyboardInterrupt:  # pragma: no cover
