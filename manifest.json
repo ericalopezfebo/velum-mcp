@@ -2,9 +2,9 @@
   "manifest_version": "0.4",
   "name": "velum",
   "display_name": "VELUM by Abogado Virtual",
-  "version": "1.1.0",
-  "description": "Anonimiza documentos jurídicos en su propio ordenador, conforme al RGPD. Sin IA, sin llamadas de red y sin conservar copias.",
-  "long_description": "VELUM quita los datos personales de escritos jurídicos sin que el documento salga de su equipo ni entre en la conversación con la IA.\n\nLa detección es determinista y auditable: reglas, dígitos de control y léxico jurídico. Se sustituyen nombres, DNI, NIE, CIF, SSN, direcciones, IBAN, teléfonos, correos, matrículas y datos del artículo 9 del RGPD. Se respetan intactos los importes, las fechas de los hechos, las citas legales, los juzgados y los números de procedimiento: son el fondo del asunto, no el dato del cliente.\n\nNinguna herramienta que trabaje sobre un fichero devuelve su contenido. Devuelve rutas, recuentos y etiquetas. Un sanitizador de salida impone ese invariante en el código, no en la buena fe de quien lo escribió.\n\nCada documento se acompaña de un acta de anonimización con la huella SHA-256 del original y, opcionalmente, de una tabla de equivalencias reversible. Conservar esa tabla convierte el tratamiento en una seudonimización del artículo 4.5 del RGPD, y el fichero lleva el aviso dentro.\n\nPerfiles disponibles: España y Puerto Rico. Ninguna herramienta detecta el cien por cien de los datos personales; la revisión antes de aportar o publicar corresponde al profesional.",
+  "version": "1.2.0",
+  "description": "Anonimización local y privacidad para documentos jurídicos antes de usar IA. Diseñado para abogados de Puerto Rico y Estados Unidos.",
+  "long_description": "VELUM ayuda a abogados a usar inteligencia artificial sin exponer innecesariamente información confidencial de sus clientes. Procesa documentos jurídicos localmente, sin enviar el expediente a una IA externa para anonimizarlo. El flujo recomendado es: expediente local -> VELUM -> anonimización -> revisión de residuos -> Privacy Gate -> copia externa -> IA. La detección es determinista y auditable mediante patrones, validadores y léxico jurídico. Ninguna herramienta que trabaje sobre un fichero devuelve su contenido original. El Privacy Gate clasifica el resultado como SAFE, REVIEW_REQUIRED o BLOCKED y el modo seguro evita mapas reversibles de equivalencias para el flujo externo. VELUM no determina attorney-client privilege, work product ni cumplimiento ético; el abogado conserva el juicio profesional y debe revisar el resultado. El perfil de Puerto Rico preserva referencias como KLAN, KLCE, KLRA, TSPR, DPR, LPRA, Civil Núm. y los foros locales. El perfil de Estados Unidos cubre categorías comunes de la práctica federal y estatal. El proyecto está dirigido especialmente a abogados de Puerto Rico y a la comunidad jurídica hispana en Estados Unidos.",
   "author": {
     "name": "Erica López Febo",
     "url": "https://github.com/ericalopezfebo"
@@ -38,7 +38,7 @@
     "carpetas_autorizadas": {
       "type": "directory",
       "title": "Carpetas de expedientes",
-      "description": "VELUM solo abrirá ficheros situados dentro de estas carpetas. Todo lo demás se rechaza, incluso si se le indica la ruta. Elija la carpeta donde guarda los casos.",
+      "description": "VELUM solo abrirá ficheros situados dentro de estas carpetas. Todo lo demás se rechaza. Elija la carpeta donde guarda los casos.",
       "multiple": true,
       "required": true,
       "default": [
@@ -48,8 +48,8 @@
     "jurisdiccion": {
       "type": "string",
       "title": "Jurisdicción",
-      "description": "ESPANA, ESTADOS_UNIDOS o PUERTO_RICO. Determina qué identificadores se detectan y qué citas legales se preservan. PUERTO_RICO incluye el perfil de Estados Unidos, porque el foro federal es parte ordinaria de la práctica local.",
-      "default": "ESPANA",
+      "description": "PUERTO_RICO o ESTADOS_UNIDOS. Puerto Rico incorpora la cobertura estadounidense porque la práctica local incluye foros y autoridades federales.",
+      "default": "PUERTO_RICO",
       "required": false
     }
   },
@@ -60,66 +60,61 @@
     },
     {
       "name": "revisar_texto",
-      "description": "Dice qué datos personales contiene un texto, sin modificarlo ni repetir sus valores"
+      "description": "Detecta categorías sensibles sin repetir los valores encontrados"
     },
     {
       "name": "revisar_documento",
-      "description": "Dice qué datos personales hay en un documento sin devolver su contenido"
+      "description": "Audita un documento sin devolver su contenido original"
     },
     {
       "name": "revisar_carpeta",
-      "description": "Recuento de datos personales por fichero en una carpeta, sin leer ninguno"
+      "description": "Audita documentos de una carpeta sin devolver contenido"
     },
     {
       "name": "anonimizar_texto",
-      "description": "Sustituye los datos personales de un texto pegado en el chat"
+      "description": "Anonimiza texto que el usuario ya decidió proporcionar directamente"
     },
     {
       "name": "anonimizar_documento",
-      "description": "Anonimiza un documento en el propio ordenador y devuelve rutas, no contenido"
+      "description": "Anonimiza un documento local y devuelve rutas, no el contenido original"
     },
     {
       "name": "anonimizar_carpeta",
-      "description": "Anonimiza todos los documentos compatibles de una carpeta"
+      "description": "Anonimiza documentos locales y devuelve rutas, no contenido original"
     }
   ],
   "prompts": [
     {
       "name": "memoria_velum",
-      "description": "Instrucción permanente para que la IA no abra los expedientes por su cuenta",
+      "description": "Instrucción permanente para mantener los expedientes fuera de la conversación con la IA",
       "arguments": [],
-      "text": "Instrucción permanente: siempre que te pida anonimizar o revisar uno o varios documentos, NO los abras ni leas su contenido tú mismo con Read, con bash ni con ninguna otra herramienta. Usa exclusivamente las herramientas de VELUM (anonimizar_documento, anonimizar_carpeta, revisar_documento, revisar_carpeta), que procesan el fichero íntegramente en mi propio ordenador, sin llamadas de red y sin conservar copias. Limítate a pasarles la ruta y a contarme el resultado: cuántos datos, de qué tipo y dónde ha quedado el documento anonimizado. No copies, no cites, no resumas ni reproduzcas el contenido de un documento antes de anonimizarlo: es material sujeto al RGPD y al secreto profesional. Si te pego texto directamente en el chat, adviérteme de que ese texto ya ha salido de mi ordenador y recomiéndame usar la ruta del fichero."
+      "text": "Instrucción permanente: cuando te pida anonimizar o revisar documentos, NO abras ni leas el contenido del expediente por tu cuenta. Usa exclusivamente las herramientas de VELUM, que procesan los ficheros localmente. Limítate a pasar la ruta y a informarme del resultado estructurado. No copies, cites, resumas ni reproduzcas contenido original antes de anonimizarlo. Si te pego texto directamente en el chat, adviérteme de que ese texto ya salió de mi entorno local y recomiéndame utilizar la ruta del fichero. Recuerda que VELUM reduce el riesgo técnico pero no determina attorney-client privilege, work product ni cumplimiento ético."
     },
     {
-      "name": "anonimizar_carpeta_para_perito",
-      "description": "Anonimiza una carpeta de expedientes y la deja lista para remitir",
+      "name": "preparar_para_ia",
+      "description": "Prepara un documento para revisión y posible uso con una IA externa mediante el Privacy Gate",
       "arguments": [
-        "carpeta"
+        "ruta"
       ],
-      "text": "Anonimiza todos los expedientes de la carpeta ${arguments.carpeta} y déjalos listos para remitir al perito. No abras ningún fichero por tu cuenta: usa anonimizar_carpeta. Después dime cuántos datos se sustituyeron, de qué tipo, si hay datos del artículo 9 del RGPD y si el control de calidad señaló algún residuo."
-    },
-    {
-      "name": "publicar_sentencias",
-      "description": "Prepara sentencias para publicar, con los nombres tachados y sin tabla reversible",
-      "arguments": [
-        "carpeta"
-      ],
-      "text": "Prepara para publicar las sentencias de la carpeta ${arguments.carpeta}, con los nombres tachados. Usa anonimizar_carpeta con modo \"redaccion\" y generar_equivalencias en false: si no se conserva la tabla de equivalencias, el tratamiento es una anonimización en sentido estricto y no una seudonimización del artículo 4.5 del RGPD. Recuérdame que la revisión antes de publicar sigue siendo mía."
+      "text": "Prepara el documento indicado por ${arguments.ruta} para posible uso con una IA externa. No abras ni leas el documento directamente. Usa las herramientas de VELUM y el flujo seguro. El resultado debe pasar por anonimización, revisión de residuos y Privacy Gate. No generes una tabla reversible de equivalencias. Si el estado es BLOCKED o REVIEW_REQUIRED, no presentes el documento como listo para compartir. Recuerda que la decisión final corresponde al abogado."
     }
   ],
   "keywords": [
-    "rgpd",
-    "gdpr",
-    "hipaa",
-    "anonimizacion",
-    "seudonimizacion",
+    "legal-ai",
+    "ai-privacy",
     "legaltech",
-    "abogados",
+    "mcp",
+    "anonimizacion",
     "privacidad",
-    "secreto-profesional",
+    "confidencialidad",
+    "attorney-client-privilege",
+    "work-product",
+    "professional-responsibility",
+    "aba",
     "puerto-rico",
-    "espana",
-    "estados-unidos"
+    "estados-unidos",
+    "abogados",
+    "hispanic-lawyers"
   ],
   "license": "MIT",
   "compatibility": {
