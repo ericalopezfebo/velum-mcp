@@ -17,15 +17,6 @@ from dataclasses import dataclass, field
 
 from .detectores import dentro_de, zonas_protegidas
 from . import lexico
-from .lexico import (
-    DISPARADORES_ARTICULO_9,
-    MENCIONES_ARTICULO_9,
-    PARADA,
-    PARTICULAS,
-    ROLES_POSTERIORES,
-    ROLES_PREVIOS,
-    TRATAMIENTOS,
-)
 from .modelo import Entidad
 
 _MAY = "A-ZÁÉÍÓÚÜÑ"
@@ -37,11 +28,13 @@ _PARTICULA = r"(?:de\s+la|de\s+los|de\s+las|del|de|y|e|i|van|von|da|dos|do)"
 
 _SECUENCIA_NOMBRE = rf"{_TOKEN_NOMBRE}(?:\s+(?:{_PARTICULA}\s+)?{_TOKEN_NOMBRE}){{0,4}}"
 
-RE_TRATAMIENTO = re.compile(
-    rf"(?:{'|'.join(TRATAMIENTOS)})\s+({_SECUENCIA_NOMBRE})"
-)
+def _compilar_tratamiento() -> re.Pattern[str]:
+    return re.compile(rf"(?:{'|'.join(lexico.TRATAMIENTOS)})\s+({_SECUENCIA_NOMBRE})")
 
-RE_NOMBRE_LIBRE = re.compile(rf"\b({_SECUENCIA_NOMBRE})\b")
+
+def _compilar_nombre_libre() -> re.Pattern[str]:
+    return re.compile(rf"\b({_SECUENCIA_NOMBRE})\b")
+
 
 def _compilar_empresa() -> re.Pattern[str]:
     return re.compile(
@@ -51,23 +44,42 @@ def _compilar_empresa() -> re.Pattern[str]:
     )
 
 
+def _compilar_forma_corta() -> re.Pattern[str]:
+    return re.compile(
+        rf"(?:{'|'.join(lexico.TRATAMIENTOS_CORTOS)})\s+"
+        rf"({_TOKEN_NOMBRE}(?:\s+(?:{_PARTICULA}\s+)?{_TOKEN_NOMBRE})?)(?=\W|$)"
+    )
+
+
+def _compilar_menciones_art_9() -> re.Pattern[str]:
+    return re.compile(
+        r"\b(?:" + "|".join(re.escape(m) for m in lexico.MENCIONES_ARTICULO_9) + r")\b",
+        re.IGNORECASE,
+    )
+
+
+RE_TRATAMIENTO = _compilar_tratamiento()
+RE_NOMBRE_LIBRE = _compilar_nombre_libre()
 RE_EMPRESA = _compilar_empresa()
+RE_FORMA_CORTA = _compilar_forma_corta()
+_RE_MENCIONES_ART_9 = _compilar_menciones_art_9()
 
 
 def recompilar() -> None:
-    """Rehace los patrones que dependen del léxico.
+    """Rehace todos los patrones que dependen del léxico.
 
-    Un perfil jurisdiccional amplía `lexico.FORMAS_SOCIETARIAS` después de que
-    este módulo se haya importado; sin esta llamada, la expresión de empresas
-    seguiría siendo la peninsular.
+    Un perfil jurisdiccional amplía el léxico —tratamientos, formas
+    societarias, menciones del artículo 9— después de que este módulo se haya
+    importado. Sin esta llamada, las expresiones seguirían siendo las de la
+    jurisdicción base.
     """
-    global RE_EMPRESA
+    global RE_TRATAMIENTO, RE_NOMBRE_LIBRE, RE_EMPRESA, RE_FORMA_CORTA
+    global _RE_MENCIONES_ART_9
+    RE_TRATAMIENTO = _compilar_tratamiento()
+    RE_NOMBRE_LIBRE = _compilar_nombre_libre()
     RE_EMPRESA = _compilar_empresa()
-
-RE_FORMA_CORTA = re.compile(
-    rf"(?:Sr\.ª|Sra\.|Srta\.|Sr\.|D\.ª|Dña\.|Dª|D\.|Señor(?:a)?|Do[ñn]a?)\s+"
-    rf"({_TOKEN_NOMBRE}(?:\s+(?:{_PARTICULA}\s+)?{_TOKEN_NOMBRE})?)(?=\W|$)"
-)
+    RE_FORMA_CORTA = _compilar_forma_corta()
+    _RE_MENCIONES_ART_9 = _compilar_menciones_art_9()
 
 
 def normalizar(texto: str) -> str:
@@ -84,7 +96,7 @@ def _es_parada(nombre: str) -> bool:
     partes = nombre.replace(".", "").split()
     if not partes:
         return True
-    return any(parte in PARADA for parte in partes)
+    return any(parte in lexico.PARADA for parte in partes)
 
 
 def _plausible_persona(nombre: str, con_tratamiento: bool) -> bool:
@@ -95,7 +107,7 @@ def _plausible_persona(nombre: str, con_tratamiento: bool) -> bool:
         return len(partes) >= 1
     if len(partes) < 2:
         return False
-    utiles = [p for p in partes if p not in PARTICULAS]
+    utiles = [p for p in partes if p not in lexico.PARTICULAS]
     if len(utiles) < 2:
         return False
     tiene_pila = utiles[0] in lexico.NOMBRES_PILA
@@ -126,7 +138,7 @@ class ContextoNombres:
         clave = normalizar(nombre)
         persona = self.personas.get(clave)
         if persona is None:
-            partes = [p for p in _tokens(nombre) if p not in PARTICULAS]
+            partes = [p for p in _tokens(nombre) if p not in lexico.PARTICULAS]
             apellidos = tuple(partes[1:]) if len(partes) > 1 else tuple(partes)
             persona = Persona(clave=clave, nombre_completo=nombre, apellidos=apellidos, rol=rol)
             self.personas[clave] = persona
@@ -134,7 +146,7 @@ class ContextoNombres:
                 self.apellido_a_claves.setdefault(apellido, set()).add(clave)
 
         persona.formas.add(nombre.strip())
-        piezas = [p for p in nombre.split() if p.lower() not in PARTICULAS]
+        piezas = [p for p in nombre.split() if p.lower() not in lexico.PARTICULAS]
         if len(piezas) >= 3:
             # «Pérez Molina» a partir de «Juan Antonio Pérez Molina».
             cola = " ".join(piezas[-2:])
@@ -146,7 +158,7 @@ class ContextoNombres:
 
     def resolver_forma_corta(self, fragmento: str) -> Persona | None:
         """Devuelve la persona si —y solo si— no hay ambigüedad de apellido."""
-        partes = [p for p in _tokens(fragmento) if p not in PARTICULAS]
+        partes = [p for p in _tokens(fragmento) if p not in lexico.PARTICULAS]
         if not partes:
             return None
         candidatas: set[str] | None = None
@@ -179,19 +191,49 @@ class ContextoNombres:
         return clave
 
 
+def _recortar_parada(nombre: str, inicio: int) -> tuple[str, int]:
+    """Quita del principio las palabras que nunca son nombre propio.
+
+    «Plaintiff Michael Anthony Rodriguez» empieza con una palabra de parada,
+    pero el nombre está ahí. Rechazar la secuencia entera dejaba al cliente sin
+    anonimizar, que es exactamente el fallo que no se puede permitir.
+    """
+    piezas = nombre.split()
+    desplazamiento = 0
+    while piezas and piezas[0].replace(".", "") in lexico.PARADA:
+        desplazamiento += len(piezas[0]) + 1
+        piezas.pop(0)
+    return " ".join(piezas), inicio + desplazamiento
+
+
 def _rol_por_contexto(texto: str, inicio: int, fin: int) -> str:
+    """Papel procesal por el disparador MÁS ESPECÍFICO del entorno.
+
+    «Counsel for Plaintiff Sarah Cohen» contiene tanto «counsel for» (letrado)
+    como «plaintiff» (actor). Gana el disparador más largo: es el más
+    específico, y aquí acierta.
+    """
     previo = texto[max(0, inicio - 90):inicio].lower()
     # Ventana amplia: entre el nombre y «interpone demanda» suele mediar todo el
     # inciso de identificación (edad, DNI, domicilio, teléfono).
     posterior = texto[fin:fin + 320].lower()
 
-    for rol, disparadores in ROLES_PREVIOS.items():
-        if any(previo.rstrip().endswith(d) or d in previo[-45:] for d in disparadores):
-            return rol
-    for rol, disparadores in ROLES_POSTERIORES.items():
-        if any(d in posterior for d in disparadores):
-            return rol
-    return "PERSONA"
+    mejor_rol, mejor_longitud = "PERSONA", 0
+
+    for rol, disparadores in lexico.ROLES_PREVIOS.items():
+        for disparador in disparadores:
+            if disparador in previo[-45:] and len(disparador) > mejor_longitud:
+                mejor_rol, mejor_longitud = rol, len(disparador)
+
+    if mejor_rol != "PERSONA":
+        return mejor_rol
+
+    for rol, disparadores in lexico.ROLES_POSTERIORES.items():
+        for disparador in disparadores:
+            if disparador in posterior and len(disparador) > mejor_longitud:
+                mejor_rol, mejor_longitud = rol, len(disparador)
+
+    return mejor_rol
 
 
 def detectar_nombres(
@@ -246,7 +288,13 @@ def detectar_nombres(
         for coincidencia in RE_NOMBRE_LIBRE.finditer(texto):
             inicio, fin = coincidencia.span(1)
             nombre = coincidencia.group(1).strip()
-            if not libre(inicio, fin) or not _plausible_persona(nombre, con_tratamiento=False):
+            # «Plaintiff Michael Anthony Rodriguez»: se recorta la palabra de
+            # parada inicial en vez de descartar la secuencia entera.
+            nombre, inicio = _recortar_parada(nombre, inicio)
+            fin = inicio + len(nombre)
+            if not nombre or not libre(inicio, fin):
+                continue
+            if not _plausible_persona(nombre, con_tratamiento=False):
                 continue
             rol = _rol_por_contexto(texto, inicio, fin)
             persona = contexto.registrar_persona(nombre, rol)
@@ -319,12 +367,6 @@ def detectar_formas_cortas(
     return entidades
 
 
-_RE_MENCIONES_ART_9 = re.compile(
-    r"\b(?:" + "|".join(re.escape(m) for m in MENCIONES_ARTICULO_9) + r")\b",
-    re.IGNORECASE,
-)
-
-
 def contar_menciones_articulo_9(texto: str) -> int:
     """Cuenta menciones a categoría especial que NO rigen complemento.
 
@@ -345,7 +387,7 @@ def detectar_articulo_9(
     protegidas = zonas_protegidas(texto)
     entidades: list[Entidad] = []
 
-    for tipo, disparadores in DISPARADORES_ARTICULO_9.items():
+    for tipo, disparadores in lexico.DISPARADORES_ARTICULO_9.items():
         for disparador in disparadores:
             patron = re.compile(
                 rf"\b{re.escape(disparador)}\s+([^.,;:\n)]{{3,80}})", re.IGNORECASE

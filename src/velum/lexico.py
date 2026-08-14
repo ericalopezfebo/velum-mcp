@@ -52,6 +52,13 @@ TRATAMIENTOS: tuple[str, ...] = (
     r"Ilmo\.", r"Ilma\.", r"Excmo\.", r"Excma\.",
 )
 
+# Subconjunto que puede preceder a una FORMA CORTA («el Sr. Pérez»). No todo
+# tratamiento sirve: «Excmo.» casi siempre acompaña al nombre completo.
+TRATAMIENTOS_CORTOS: tuple[str, ...] = (
+    r"Sr\.ª", r"Sra\.", r"Srta\.", r"Sr\.", r"D\.ª", r"Dña\.", r"Dª", r"D\.",
+    r"Señor(?:a)?", r"Do[ñn]a?",
+)
+
 # Secuencias que preceden a un nombre y revelan su papel procesal.
 ROLES_PREVIOS: dict[str, tuple[str, ...]] = {
     "DEMANDADO": (

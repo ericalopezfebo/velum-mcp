@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "velum",
   "display_name": "VELUM by Abogado Virtual",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Anonimiza documentos jurídicos en su propio ordenador, conforme al RGPD. Sin IA, sin llamadas de red y sin conservar copias.",
   "long_description": "VELUM quita los datos personales de escritos jurídicos sin que el documento salga de su equipo ni entre en la conversación con la IA.\n\nLa detección es determinista y auditable: reglas, dígitos de control y léxico jurídico. Se sustituyen nombres, DNI, NIE, CIF, SSN, direcciones, IBAN, teléfonos, correos, matrículas y datos del artículo 9 del RGPD. Se respetan intactos los importes, las fechas de los hechos, las citas legales, los juzgados y los números de procedimiento: son el fondo del asunto, no el dato del cliente.\n\nNinguna herramienta que trabaje sobre un fichero devuelve su contenido. Devuelve rutas, recuentos y etiquetas. Un sanitizador de salida impone ese invariante en el código, no en la buena fe de quien lo escribió.\n\nCada documento se acompaña de un acta de anonimización con la huella SHA-256 del original y, opcionalmente, de una tabla de equivalencias reversible. Conservar esa tabla convierte el tratamiento en una seudonimización del artículo 4.5 del RGPD, y el fichero lleva el aviso dentro.\n\nPerfiles disponibles: España y Puerto Rico. Ninguna herramienta detecta el cien por cien de los datos personales; la revisión antes de aportar o publicar corresponde al profesional.",
   "author": {
@@ -22,7 +22,12 @@
     "entry_point": "src/server.py",
     "mcp_config": {
       "command": "uv",
-      "args": ["run", "--directory", "${__dirname}", "src/server.py"],
+      "args": [
+        "run",
+        "--directory",
+        "${__dirname}",
+        "src/server.py"
+      ],
       "env": {
         "VELUM_RAICES": "${user_config.carpetas_autorizadas}",
         "VELUM_JURISDICCION": "${user_config.jurisdiccion}"
@@ -36,12 +41,14 @@
       "description": "VELUM solo abrirá ficheros situados dentro de estas carpetas. Todo lo demás se rechaza, incluso si se le indica la ruta. Elija la carpeta donde guarda los casos.",
       "multiple": true,
       "required": true,
-      "default": ["${DOCUMENTS}"]
+      "default": [
+        "${DOCUMENTS}"
+      ]
     },
     "jurisdiccion": {
       "type": "string",
       "title": "Jurisdicción",
-      "description": "ESPANA o PUERTO_RICO. Determina qué identificadores se detectan y qué citas legales se preservan.",
+      "description": "ESPANA, ESTADOS_UNIDOS o PUERTO_RICO. Determina qué identificadores se detectan y qué citas legales se preservan. PUERTO_RICO incluye el perfil de Estados Unidos, porque el foro federal es parte ordinaria de la práctica local.",
       "default": "ESPANA",
       "required": false
     }
@@ -86,19 +93,24 @@
     {
       "name": "anonimizar_carpeta_para_perito",
       "description": "Anonimiza una carpeta de expedientes y la deja lista para remitir",
-      "arguments": ["carpeta"],
+      "arguments": [
+        "carpeta"
+      ],
       "text": "Anonimiza todos los expedientes de la carpeta ${arguments.carpeta} y déjalos listos para remitir al perito. No abras ningún fichero por tu cuenta: usa anonimizar_carpeta. Después dime cuántos datos se sustituyeron, de qué tipo, si hay datos del artículo 9 del RGPD y si el control de calidad señaló algún residuo."
     },
     {
       "name": "publicar_sentencias",
       "description": "Prepara sentencias para publicar, con los nombres tachados y sin tabla reversible",
-      "arguments": ["carpeta"],
+      "arguments": [
+        "carpeta"
+      ],
       "text": "Prepara para publicar las sentencias de la carpeta ${arguments.carpeta}, con los nombres tachados. Usa anonimizar_carpeta con modo \"redaccion\" y generar_equivalencias en false: si no se conserva la tabla de equivalencias, el tratamiento es una anonimización en sentido estricto y no una seudonimización del artículo 4.5 del RGPD. Recuérdame que la revisión antes de publicar sigue siendo mía."
     }
   ],
   "keywords": [
     "rgpd",
     "gdpr",
+    "hipaa",
     "anonimizacion",
     "seudonimizacion",
     "legaltech",
@@ -106,12 +118,17 @@
     "privacidad",
     "secreto-profesional",
     "puerto-rico",
-    "espana"
+    "espana",
+    "estados-unidos"
   ],
   "license": "MIT",
   "compatibility": {
     "claude_desktop": ">=0.10.0",
-    "platforms": ["darwin", "win32", "linux"],
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
     "runtimes": {
       "python": ">=3.10"
     }

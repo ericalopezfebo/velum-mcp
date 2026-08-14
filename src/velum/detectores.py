@@ -149,7 +149,13 @@ PATRONES: dict[str, re.Pattern[str]] = {
 PATRONES_EXTRA: list[tuple[str, re.Pattern[str]]] = []
 
 # Tipos cuyo hallazgo se descarta si el dígito de control no cuadra.
-_REQUIEREN_CONTROL = {"DNI", "NIE", "CIF", "IBAN", "TARJETA", "NSS", "CATASTRO", "MATRICULA"}
+_REQUIEREN_CONTROL = {
+    "DNI", "NIE", "CIF", "IBAN", "TARJETA", "NSS", "CATASTRO", "MATRICULA",
+    "ABA", "EIN",
+}
+
+# Máscara del Social Security Number. Un teléfono nunca se escribe así.
+_MASCARA_SSN = re.compile(r"\d{3}-\d{2}-\d{4}")
 
 # Palabras que, delante de una cifra, indican que no es un teléfono.
 _ANTES_NO_TELEFONO = re.compile(
@@ -181,8 +187,15 @@ def detectar_reglas(texto: str, bloque: int = 0, categorias: set[str] | None = N
             if codigo in _REQUIEREN_CONTROL and not VALIDADORES[codigo](valor):
                 continue
 
-            if codigo == "TELEFONO" and _ANTES_NO_TELEFONO.search(texto[max(0, inicio - 24):inicio]):
-                continue
+            if codigo == "TELEFONO":
+                if _ANTES_NO_TELEFONO.search(texto[max(0, inicio - 24):inicio]):
+                    continue
+                # 666-12-3456 tiene la máscara de un SSN, no de un teléfono. Si
+                # el validador de SSN ya lo descartó por pertenecer a un bloque
+                # nunca emitido, tampoco es un número de teléfono español: es
+                # una cifra que no se puede identificar, y no se toca.
+                if _MASCARA_SSN.fullmatch(valor):
+                    continue
 
             if codigo in {"DIRECCION", "LICENCIA"}:
                 valor = valor.rstrip(" ,.;:")

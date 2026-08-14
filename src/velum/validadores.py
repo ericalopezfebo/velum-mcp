@@ -122,7 +122,39 @@ def matricula_valida(valor: str) -> bool:
     return bool(re.fullmatch(r"[A-Z]{1,2}\d{4}[A-Z]{1,2}", limpio))
 
 
+def aba_valido(valor: str) -> bool:
+    """Número de ruta bancaria estadounidense (ABA), con su dígito de control."""
+    digitos = re.sub(r"\D", "", valor)
+    if len(digitos) != 9 or digitos == "0" * 9:
+        return False
+    d = [int(c) for c in digitos]
+    suma = 3 * (d[0] + d[3] + d[6]) + 7 * (d[1] + d[4] + d[7]) + (d[2] + d[5] + d[8])
+    return suma % 10 == 0
+
+
+# Prefijos de campus efectivamente asignados por el IRS. El EIN no lleva dígito
+# de control, así que esto es lo más cerca de una validación que se puede llegar.
+_PREFIJOS_EIN = frozenset(
+    """
+    01 02 03 04 05 06 10 11 12 13 14 15 16 20 21 22 23 24 25 26 27 30 31 32 33
+    34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 50 51 52 53 54 55 56 57 58 59
+    60 61 62 63 64 65 66 67 68 71 72 73 74 75 76 77 80 81 82 83 84 85 86 87 88
+    90 91 92 93 94 95 98 99
+    """.split()
+)
+
+
+def ein_valido(valor: str) -> bool:
+    """Employer Identification Number: NN-NNNNNNN con prefijo de campus real."""
+    digitos = re.sub(r"\D", "", valor)
+    if len(digitos) != 9 or digitos[2:] == "0000000":
+        return False
+    return digitos[:2] in _PREFIJOS_EIN
+
+
 VALIDADORES = {
+    "ABA": aba_valido,
+    "EIN": ein_valido,
     "DNI": dni_valido,
     "NIE": nie_valido,
     "CIF": cif_valido,

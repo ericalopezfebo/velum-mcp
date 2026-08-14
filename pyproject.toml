@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "velum-mcp"
-version = "1.0.0"
+version = "1.1.0"
 description = "VELUM by Abogado Virtual — Legal Document Anonymization & Privacy MCP (local-first, sin IA)"
 readme = "README.md"
 requires-python = ">=3.10"

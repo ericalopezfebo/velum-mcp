@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 
-JURISDICCIONES = ("ESPANA", "PUERTO_RICO")
+JURISDICCIONES = ("ESPANA", "ESTADOS_UNIDOS", "PUERTO_RICO")
 VARIABLE_ENTORNO = "VELUM_JURISDICCION"
 POR_DEFECTO = "ESPANA"
 
@@ -32,10 +32,21 @@ def instalar(jurisdiccion: str | None = None) -> str:
         elegida = POR_DEFECTO
     if elegida == _instalada:
         return elegida
+
+    if elegida in ("ESTADOS_UNIDOS", "PUERTO_RICO"):
+        from . import estados_unidos
+
+        estados_unidos.instalar()
+
     if elegida == "PUERTO_RICO":
+        # Puerto Rico se apila SOBRE Estados Unidos, no en su lugar. El foro
+        # federal del Distrito de Puerto Rico y el Primer Circuito son parte
+        # ordinaria de la práctica local, y un mismo escrito cita el Código
+        # Civil de Puerto Rico junto a 42 U.S.C. § 1983 sin pestañear.
         from . import puerto_rico
 
         puerto_rico.instalar()
+
     _instalada = elegida
     return elegida
 

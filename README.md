@@ -154,19 +154,38 @@ Por cada documento, tres ficheros junto al original —que **no se modifica**:
 
 ## Jurisdicciones
 
-**España** (por defecto). DNI, NIE y CIF con letra de control; IBAN con mod 97;
-NSS; matrícula; referencia catastral; formas societarias peninsulares; ECLI y
-ROJ preservados.
+Se elige al instalar, o con `VELUM_JURISDICCION`. Un perfil **amplía** el léxico
+base, nunca lo sustituye.
 
-**Puerto Rico** (`VELUM_JURISDICCION=PUERTO_RICO`). Añade SSN, licencia de
-conducir, teléfonos 787/939, direcciones con urbanización, barrio, sector y
-apartado, ZIP+4, apellidos locales y formas societarias estadounidenses. Preserva
-las citas propias del foro: `KLAN`, `KLCE`, `KLRA`, `TSPR`, `DPR`, `LPRA`,
-`Civil Núm.`, las Reglas de Procedimiento Civil y los tribunales locales.
+**España** (`ESPANA`, por defecto). DNI, NIE y CIF con letra de control; IBAN con
+mod 97; NSS; matrícula; referencia catastral; formas societarias peninsulares.
+Preserva artículos, leyes, ECLI y ROJ.
 
-Un perfil **amplía** el léxico base, nunca lo sustituye: un escrito
-puertorriqueño puede citar jurisprudencia local, federal y española en el mismo
-párrafo.
+**Estados Unidos** (`ESTADOS_UNIDOS`). SSN —rechazando los bloques nunca
+emitidos—, EIN con prefijo de campus real, número de ruta bancaria ABA con su
+dígito de control, licencia de conducir, MRN e identificador de Medicare,
+teléfonos y direcciones en formato norteamericano con ZIP+4.
+
+Preserva el aparato de citación completo: `U.S.C.`, `C.F.R.`, los reporteros
+federales y regionales (`U.S.`, `S. Ct.`, `F.3d`, `F. Supp. 2d`, `N.E.3d`,
+`P.3d`, `A.3d`, `So. 3d`…), `Fed. R. Civ. P.`, números de caso y de expediente,
+tribunales y agencias.
+
+Y preserva **los nombres de caso citados**. Esto último importa más de lo que
+parece: en `Bell Atlantic Corp. v. Twombly, 550 U.S. 544 (2007)`, «Bell Atlantic
+Corp.» es la autoridad en la que se apoya el argumento, no una parte del pleito.
+Anonimizarla arruinaría el escrito. VELUM la reconoce por la cita de reportero
+que la sigue.
+
+**Puerto Rico** (`PUERTO_RICO`). Se apila **sobre** el perfil estadounidense, no
+en su lugar: el Distrito de Puerto Rico es un foro federal y las apelaciones van
+al Primer Circuito, de modo que un mismo escrito cita el Código Civil de Puerto
+Rico junto a 42 U.S.C. § 1983 sin pestañear.
+
+Añade licencia de conducir local, teléfonos 787/939 y direcciones con
+urbanización, barrio, sector y apartado. Preserva `KLAN`, `KLCE`, `KLRA`,
+`TSPR`, `DPR`, `LPRA`, `Civil Núm.`, las Reglas de Procedimiento Civil y los
+foros locales, incluida la CASP.
 
 ---
 

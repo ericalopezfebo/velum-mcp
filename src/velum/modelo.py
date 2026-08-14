@@ -26,6 +26,13 @@ TIPOS: dict[str, Tipo] = {
     "NSS": Tipo("NSS", "NSS", "identificadores", "Número de la Seguridad Social"),
     "SSN": Tipo("SSN", "SSN", "identificadores", "Social Security Number (EE. UU. / P. R.)"),
     "LICENCIA": Tipo("LICENCIA", "LICENCIA", "identificadores", "Licencia de conducir"),
+    "EIN": Tipo("EIN", "EIN", "identificadores", "Employer Identification Number (EE. UU.)"),
+    "MEDICARE": Tipo("MEDICARE", "MEDICARE", "identificadores", "Medicare Beneficiary Identifier"),
+    "EXPEDIENTE_MEDICO": Tipo(
+        "EXPEDIENTE_MEDICO", "EXPEDIENTE_MEDICO", "sensibles",
+        "Número de historia clínica", articulo_9=True,
+    ),
+    "ABA": Tipo("ABA", "ABA", "economicos", "Número de ruta bancaria (EE. UU.)"),
     # --- Contacto -------------------------------------------------------
     "EMAIL": Tipo("EMAIL", "EMAIL", "contacto", "Dirección de correo electrónico"),
     "TELEFONO": Tipo("TELEFONO", "TELEFONO", "contacto", "Número de teléfono"),
