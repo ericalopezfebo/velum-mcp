@@ -1,0 +1,35 @@
+# --- SECRETO PROFESIONAL ---------------------------------------------------
+# Ningún expediente real entra en el repositorio. Ni en pruebas, ni en
+# fixtures, ni en una captura para reportar un fallo. Solo documentos
+# sintéticos. Un documento de cliente en un repositorio es una brecha del
+# artículo 33 del RGPD, y en Git el historial no se borra con un rm.
+casos/
+Casos/
+expedientes/
+clientes/
+*_anonimizado*
+*_equivalencias*
+*_acta*
+*.docx
+*.doc
+*.pdf
+*.rtf
+*.odt
+!tests/fixtures/sintetico_*.docx
+
+# --- Entorno ---------------------------------------------------------------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+dist/
+build/
+*.egg-info/
+.DS_Store
+.idea/
+.vscode/

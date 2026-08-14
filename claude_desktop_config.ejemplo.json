@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "velum": {
+      "command": "/ruta/absoluta/a/velum-mcp/.venv/bin/velum-mcp",
+      "env": {
+        "VELUM_RAICES": "/Users/usuario/Documents/Casos",
+        "VELUM_JURISDICCION": "PUERTO_RICO"
+      }
+    }
+  }
+}
