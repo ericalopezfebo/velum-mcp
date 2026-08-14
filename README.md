@@ -1,74 +1,174 @@
 # VELUM by Abogado Virtual
 
-**Legal Document Anonymization & Privacy MCP**
+**Legal AI Privacy & Anonymization MCP for Puerto Rico and U.S. lawyers**
 
-Quita los datos personales de escritos jurídicos **en el propio ordenador**. Sin
-modelo de lenguaje, sin llamadas de red y sin conservar copias: el expediente no
-sale del equipo y no entra en la conversación con la IA.
+VELUM ayuda a abogados a utilizar inteligencia artificial sin exponer innecesariamente la información confidencial de sus clientes. Procesa documentos jurídicos **localmente**, sin enviar el expediente a una IA externa para anonimizarlo.
 
-```
-Que D. Juan Antonio Pérez Molina, con DNI 45.892.113-Y y domicilio en la calle
-Serrano n.º 47, 28001 Madrid, interpone demanda frente a Inversiones Delta Sur,
-S.L., CIF B-87456323, por la transferencia de 34.500 € ordenada el 12 de marzo
-de 2024 a la cuenta ES91 2100 0418 4502 0005 1332. Artículos 1101 y 1124 CC.
-                                   ↓
-Que D. [ACTOR_1], con DNI [DNI_1] y domicilio en la [DIRECCION_1], interpone
-demanda frente a [EMPRESA_1], CIF [CIF_1], por la transferencia de 34.500 €
-ordenada el 12 de marzo de 2024 a la cuenta [IBAN_1]. Artículos 1101 y 1124 CC.
-```
+> **Expediente local → VELUM → anonimización → revisión de residuos → Privacy Gate → copia externa → IA**
 
-El importe, la fecha de los hechos y las citas legales no se tocan. Son el fondo
-del asunto, no el dato del cliente.
+VELUM está diseñado para apoyar las obligaciones profesionales relacionadas con confidencialidad, competencia tecnológica, supervisión del abogado y protección de información confidencial. Su diseño toma en cuenta las reglas profesionales aplicables en Puerto Rico y el marco de responsabilidad profesional de la ABA.
+
+**VELUM no certifica que un documento sea anónimo, no determina attorney-client privilege o work product y no sustituye el juicio profesional del abogado.**
 
 ---
 
-## Por qué
+## Ejemplo: Puerto Rico
 
-Un expediente pegado en el chat de una IA de consumo se trata fuera del control
-del despacho y sin contrato de encargado del tratamiento. Eso choca con los
-artículos 28 y 44 del RGPD y con el deber de secreto profesional.
+Documento original:
 
-VELUM lo resuelve por la vía más simple: si el documento ya no lleva datos
-personales dentro, deja de haber tratamiento que proteger.
+```text
+Que Carlos Javier Rivera Morales, vecino de Bayamón, Puerto Rico,
+representado por la Lcda. Andrea M. Vega Rosario, comparece ante este
+Honorable Tribunal y solicita que se declare con lugar la presente
+contestación a la demanda. El asunto surge de un contrato de construcción
+suscrito el 15 de enero de 2025 por la cantidad de $85,000.00.
 
-**No hay «procesamiento en servidores europeos» porque no hay procesamiento
-fuera de su máquina.** La detección es determinista y auditable —reglas,
-dígitos de control y léxico jurídico—, y eso se puede comprobar leyendo el
-código: no hay una sola llamada de red.
+Civil Núm. BY2026CV00482.
+```
+
+Después de VELUM:
+
+```text
+Que [DEMANDADO_1], vecino de [MUNICIPIO_1], Puerto Rico,
+representado por [LETRADO_1], comparece ante este Honorable Tribunal y
+solicita que se declare con lugar la presente contestación a la demanda.
+El asunto surge de un contrato de construcción suscrito el [FECHA_1]
+por la cantidad de $85,000.00.
+
+Civil Núm. [NUMERO_CASO_1].
+```
+
+VELUM procura conservar el contenido jurídico necesario para comprender el asunto, incluyendo cuantías, hechos y citas legales, mientras sustituye identificadores configurados como información personal o del expediente. La política concreta depende de la jurisdicción y del modo de salida.
 
 ---
 
-## Garantías, y cómo se imponen
+## Por qué existe VELUM
 
-| Promesa | Cómo se impone |
+Un abogado no debería tener que escoger entre utilizar IA y entregar el expediente confidencial a un proveedor externo para que la propia IA lo anonimice.
+
+VELUM invierte el flujo: **la información se reduce localmente antes de llegar a la IA**.
+
+La detección es determinista y auditable: patrones, validadores, léxico jurídico y reglas específicas de jurisdicción. No se utiliza un modelo de lenguaje para decidir qué información debe salir del equipo.
+
+Las herramientas que trabajan con ficheros están diseñadas para devolver rutas, recuentos, etiquetas y resultados estructurados, no el contenido original del expediente. Un sanitizador de salida impone esta frontera en el código.
+
+---
+
+## Privacy Gate
+
+La anonimización no es suficiente por sí sola. VELUM incorpora un **Privacy Gate** para separar el procesamiento técnico de la decisión profesional sobre compartir un documento.
+
+| Estado | Significado |
 | --- | --- |
-| El documento no sale del equipo | Sin dependencias de red. Auditable en `src/velum/`. |
-| El documento no entra en la conversación | `seguridad/salida.py` reconstruye cada respuesta desde su modelo público y bloquea cualquier clave de contenido. Si algo se filtrara, la respuesta no llega a emitirse. |
-| Solo se abre lo autorizado | `seguridad/rutas.py`: raíces declaradas en `VELUM_RAICES`; se rechazan rutas relativas, travesías `..` y enlaces simbólicos. |
-| El fichero es lo que dice ser | `seguridad/limites.py`: firma mágica coherente con la extensión y tamaño máximo. |
-| Los errores no filtran nada | `seguridad/errores.py`: códigos cerrados y plantillas escritas de antemano. Ningún mensaje deriva de la entrada ni de una excepción. |
+| `SAFE` | VELUM no detectó los hallazgos que busca. **No es una certificación jurídica.** |
+| `REVIEW_REQUIRED` | Existen hallazgos que requieren revisión humana antes de compartir. |
+| `BLOCKED` | Se detectó un riesgo que impide el flujo externo hasta corregirlo. |
 
-Las pruebas de `tests/test_seguridad.py` lo comprueban con canarios: si un
-nombre, un DNI o un CIF apareciera en la respuesta de una herramienta
-documental, la prueba falla.
+El modo seguro bloquea situaciones como mapas reversibles de equivalencias y hallazgos de alta severidad.
+
+### Regla práctica
+
+> Si existe duda razonable sobre si el documento puede salir del entorno del despacho, no se comparte todavía. Se ejecuta una nueva revisión y el abogado decide.
 
 ---
 
-## Qué se sustituye y qué se respeta
+## Privacidad profesional y uso de IA
 
-| Se sustituye | Se respeta intacto |
+VELUM está pensado como **control técnico**, no como sustituto del análisis ético o jurídico.
+
+Antes de utilizar un proveedor externo, el abogado debe evaluar, según las circunstancias del caso, sus términos de servicio, retención, uso para entrenamiento, seguridad, subprocesadores, controles de acceso, ubicación de los datos y cualquier obligación asumida frente al cliente.
+
+La tecnología tampoco elimina la obligación de revisar el resultado. Un abogado conserva responsabilidad por el contenido que utiliza, presenta ante un tribunal o comunica al cliente.
+
+En Puerto Rico, el diseño de VELUM presta especial atención a la competencia y diligencia tecnológica, la protección de información confidencial y privilegiada y la supervisión profesional. El marco de la ABA se utiliza como referencia adicional para el uso responsable de tecnología y herramientas de IA.
+
+**Esto es documentación de diseño y seguridad, no una opinión legal sobre un caso concreto.**
+
+---
+
+## Anonimización no es lo mismo que seudonimización
+
+**Anonimización:** busca eliminar la posibilidad razonable de identificar nuevamente a una persona utilizando la información conservada.
+
+**Seudonimización:** sustituye identificadores, pero existe información adicional que permite volver a atribuirlos. Una tabla de equivalencias es un ejemplo típico.
+
+**Confidencialidad / privilege / work product:** son conceptos jurídicos distintos. El hecho de eliminar nombres no significa que el resto del documento deje de estar protegido o sea apropiado para divulgarse.
+
+Por eso el modo de preparación para uso externo no debe conservar una tabla reversible.
+
+---
+
+## Qué se sustituye y qué se preserva
+
+| Puede sustituirse | Normalmente se preserva cuando es parte del contexto jurídico |
 | --- | --- |
 | Nombres y apellidos | Importes y cuantías |
-| DNI, NIE, CIF, pasaporte, NSS, SSN | Fechas de los hechos |
-| Direcciones postales | Artículos, leyes y reglas citadas |
-| IBAN y tarjetas | Juzgados y tribunales |
-| Teléfonos y correos | Números de procedimiento, autos y rollo |
-| Matrículas y referencias catastrales | ECLI, ROJ, TSPR, DPR, KLAN |
-| Denominaciones sociales | Estilos, tablas, notas y numeración |
-| Datos del artículo 9 del RGPD | El relato de los hechos y los fundamentos |
+| SSN y otros identificadores personales | Fechas relevantes para el relato |
+| Direcciones | Estatutos, reglas y artículos citados |
+| Teléfonos y correos | Tribunales y foros jurídicos |
+| Información bancaria | Citas jurisprudenciales |
+| Matrículas y otros identificadores | Numeración jurídica necesaria para entender el argumento |
+| Denominaciones de partes y entidades | ECLI y referencias de jurisprudencia, cuando correspondan |
 
-Las fechas se conservan de serie: en un escrito jurídico suelen ser el hilo del
-relato y borrarlas lo deja inservible.
+La preservación no es absoluta: un número de caso, una fecha o un tribunal pueden ser identificadores del expediente. Por eso el Privacy Gate también considera **identificadores del caso y riesgo de reidentificación**, no solamente PII tradicional.
+
+---
+
+## Puerto Rico
+
+El perfil `PUERTO_RICO` amplía el motor base con patrones y léxico propios de la práctica puertorriqueña.
+
+Incluye, entre otros:
+
+- `KLAN`, `KLCE`, `KLRA`, `TSPR`, `DPR` y `LPRA`;
+- `Civil Núm.`, `Caso Núm.` y otros marcadores de expediente;
+- Tribunal General de Justicia, Tribunal de Apelaciones y Tribunal Supremo de Puerto Rico;
+- CASP y otros foros administrativos configurados;
+- teléfonos 787 y 939;
+- direcciones con urbanización, barrio, sector, carretera, apartado y códigos postales de Puerto Rico;
+- formas societarias habituales en Puerto Rico y Estados Unidos.
+
+VELUM preserva las referencias jurídicas que son necesarias para el análisis. Por ejemplo, en una cita como `Pueblo v. Pérez, 202 DPR 123 (2019)`, el nombre de la autoridad no debe tratarse automáticamente como si fuera el nombre de una parte del expediente.
+
+Puerto Rico también comparte con la práctica federal estadounidense categorías como SSN, identificadores bancarios y citas federales; por eso el perfil local se apoya en la cobertura de Estados Unidos.
+
+---
+
+## Estados Unidos
+
+El perfil `ESTADOS_UNIDOS` está orientado a la práctica jurídica estadounidense e incluye categorías como SSN, EIN, teléfonos, direcciones, identificadores profesionales y referencias del sistema federal, además de preservar citas jurídicas y números de procedimiento cuando forman parte del contexto legal.
+
+El objetivo de VELUM es servir tanto a abogados de Puerto Rico como a la comunidad jurídica hispana que ejerce en Estados Unidos.
+
+---
+
+## Seguridad por diseño
+
+| Promesa | Cómo se intenta imponer |
+| --- | --- |
+| El expediente permanece local durante el procesamiento | El motor de anonimización no necesita una IA ni una llamada de red |
+| Las herramientas documentales no devuelven el contenido original | El servidor expone resultados estructurados y el sanitizador de salida bloquea contenido documental |
+| Solo se abren rutas autorizadas | `seguridad/rutas.py` restringe las raíces configuradas |
+| Los errores no reproducen información de entrada | `seguridad/errores.py` usa códigos y mensajes cerrados |
+| El flujo externo tiene un control explícito | `privacidad/gate.py` aplica `SAFE`, `REVIEW_REQUIRED` o `BLOCKED` |
+| El modo seguro evita mapas reversibles | `secure_server.py` desactiva equivalencias salvo habilitación explícita |
+
+Estas son propiedades técnicas del software, no garantías absolutas de anonimización ni de cumplimiento ético.
+
+---
+
+## Qué se entrega
+
+El original no se modifica. El flujo puede producir:
+
+- una copia anonimizada;
+- un acta de auditoría;
+- un informe de privacidad;
+- opcionalmente, una tabla de equivalencias para **uso interno**.
+
+La tabla reversible no forma parte del paquete destinado a una IA o tercero en el modo seguro.
+
+Los artefactos de auditoría internos pueden contener información que no debe publicarse. Por ejemplo, una huella del documento original puede ser útil para control interno, pero no necesariamente debe acompañar a una copia pública.
 
 ---
 
@@ -100,109 +200,41 @@ En `claude_desktop_config.json`:
 }
 ```
 
-`VELUM_RAICES` es obligatorio en la práctica: VELUM solo abre ficheros situados
-dentro de esas carpetas. Se pueden indicar varias separadas por `:`. Si no se
-declara, se usa `~/Documents`.
-
-`VELUM_JURISDICCION` admite `ESPANA` (por defecto) o `PUERTO_RICO`.
+`VELUM_RAICES` limita los ficheros que VELUM puede abrir. Se pueden indicar varias raíces según la plataforma.
 
 ### Claude Code
 
 ```bash
-claude mcp add velum -e VELUM_RAICES=/ruta/a/casos -- /ruta/a/.venv/bin/velum-mcp
+claude mcp add velum -e VELUM_RAICES=/ruta/a/casos -e VELUM_JURISDICCION=PUERTO_RICO -- /ruta/a/.venv/bin/velum-mcp
 ```
 
 ---
 
 ## Herramientas
 
-| Tool | Qué hace | ¿Devuelve contenido? |
+| Tool | Qué hace | ¿Devuelve contenido original? |
 | --- | --- | --- |
-| `estado` | Conexión, jurisdicción y carpetas autorizadas | — |
-| `revisar_texto` | Qué datos hay en un texto pegado | No |
-| `revisar_documento` | Qué datos hay en un fichero | **No** |
-| `revisar_carpeta` | Recuento por fichero de una carpeta | **No** |
-| `anonimizar_texto` | Sustituye en un texto pegado | Sí, el texto ya anonimizado |
-| `anonimizar_documento` | Anonimiza un fichero | **No**: devuelve rutas |
-| `anonimizar_carpeta` | Anonimiza una carpeta | **No**: devuelve rutas |
+| `estado` | Conexión, jurisdicción y carpetas autorizadas | No |
+| `revisar_texto` | Detecta categorías en texto proporcionado directamente | No reproduce los valores detectados |
+| `revisar_documento` | Audita un fichero | No |
+| `revisar_carpeta` | Audita una carpeta | No |
+| `anonimizar_texto` | Anonimiza texto que el usuario ya decidió pegar en el chat | Devuelve texto ya procesado |
+| `anonimizar_documento` | Anonimiza un fichero local | No: devuelve rutas y resultados |
+| `anonimizar_carpeta` | Procesa documentos locales | No: devuelve rutas y resultados |
 
-**Modos:** `token` (`[ACTOR_1]`, por defecto), `seudonimo` (nombres falsos
-coherentes), `redaccion` (tachado ███), `hash` (etiqueta con huella estable
-entre documentos).
+**Modos:** `token`, `seudonimo`, `redaccion` y `hash`, según el perfil y la operación.
 
-**Categorías:** `identificadores`, `contacto`, `economicos`, `bienes`,
-`nombres`, `empresas`, `sensibles`.
+La tabla de equivalencias debe considerarse un artefacto interno y reversible; el modo seguro no la utiliza para preparar documentos destinados a terceros.
 
 ---
 
-## Qué se entrega
+## Limitaciones
 
-Por cada documento, tres ficheros junto al original —que **no se modifica**:
-
-- `nombre_anonimizado.docx` — mismo formato, mismo aspecto.
-- `nombre_anonimizado_acta.json` y `.md` — fecha, huella SHA-256 del original,
-  recuento por tipo, método y control de calidad. Sin ningún dato personal.
-- `nombre_anonimizado_equivalencias.xlsx` — qué etiqueta sustituyó a qué dato.
-
-> **Anonimizar y seudonimizar no son lo mismo.** Si conserva la tabla de
-> equivalencias, jurídicamente lo hecho es **seudonimización** (art. 4.5 RGPD) y
-> el documento sigue siendo dato personal para quien tenga acceso a esa tabla.
-> Por eso el fichero es opcional y lleva el aviso dentro. Para anonimización en
-> sentido estricto, llame con `generar_equivalencias: false`.
-
----
-
-## Jurisdicciones
-
-Se elige al instalar, o con `VELUM_JURISDICCION`. Un perfil **amplía** el léxico
-base, nunca lo sustituye.
-
-**España** (`ESPANA`, por defecto). DNI, NIE y CIF con letra de control; IBAN con
-mod 97; NSS; matrícula; referencia catastral; formas societarias peninsulares.
-Preserva artículos, leyes, ECLI y ROJ.
-
-**Estados Unidos** (`ESTADOS_UNIDOS`). SSN —rechazando los bloques nunca
-emitidos—, EIN con prefijo de campus real, número de ruta bancaria ABA con su
-dígito de control, licencia de conducir, MRN e identificador de Medicare,
-teléfonos y direcciones en formato norteamericano con ZIP+4.
-
-Preserva el aparato de citación completo: `U.S.C.`, `C.F.R.`, los reporteros
-federales y regionales (`U.S.`, `S. Ct.`, `F.3d`, `F. Supp. 2d`, `N.E.3d`,
-`P.3d`, `A.3d`, `So. 3d`…), `Fed. R. Civ. P.`, números de caso y de expediente,
-tribunales y agencias.
-
-Y preserva **los nombres de caso citados**. Esto último importa más de lo que
-parece: en `Bell Atlantic Corp. v. Twombly, 550 U.S. 544 (2007)`, «Bell Atlantic
-Corp.» es la autoridad en la que se apoya el argumento, no una parte del pleito.
-Anonimizarla arruinaría el escrito. VELUM la reconoce por la cita de reportero
-que la sigue.
-
-**Puerto Rico** (`PUERTO_RICO`). Se apila **sobre** el perfil estadounidense, no
-en su lugar: el Distrito de Puerto Rico es un foro federal y las apelaciones van
-al Primer Circuito, de modo que un mismo escrito cita el Código Civil de Puerto
-Rico junto a 42 U.S.C. § 1983 sin pestañear.
-
-Añade licencia de conducir local, teléfonos 787/939 y direcciones con
-urbanización, barrio, sector y apartado. Preserva `KLAN`, `KLCE`, `KLRA`,
-`TSPR`, `DPR`, `LPRA`, `Civil Núm.`, las Reglas de Procedimiento Civil y los
-foros locales, incluida la CASP.
-
----
-
-## Limitaciones, dichas sin adornos
-
-- **No detecta el cien por cien de los datos personales**, y ninguna herramienta
-  lo hace. Un dato puede escaparse por una transcripción defectuosa, por una
-  redacción inusual o por ser un dato indirecto que solo identifica en contexto.
-- **Sin IA, la cobertura de nombres en prosa libre es menor.** Se detecta con
-  tratamiento (`D. Fulano`), con léxico de nombres de pila o por coreferencia
-  con un nombre ya identificado. Un apellido suelto y desconocido puede pasar.
-- **No se admite PDF.** Los ficheros PDF se enumeran pero no se abren. La
-  redacción seria exige eliminar los glifos del fichero, no pintar un rectángulo
-  encima; la decisión de dependencia está documentada en
-  `docs/PDF_DEPENDENCY_EVALUATION.md` y aún no está tomada.
-- **Notas al pie:** la sustitución se hace nodo a nodo, de modo que un dato
-  partido entre dos nodos puede escapar. El control de calidad lo señala.
+- Ninguna herramienta detecta el cien por cien de la información personal o de los identificadores indirectos.
+- Sin un modelo de lenguaje, algunos nombres o referencias atípicas pueden escapar a las reglas deterministas.
+- La reidentificación puede producirse por la combinación de hechos aparentemente inocuos.
+- La metadata de un documento puede contener información distinta de la que aparece visualmente; por eso la preparación externa debe sanitizar también las propiedades y revisiones cuando la herramienta lo soporte.
+- Un documento que supera el Privacy Gate sigue requiriendo revisión profesional.
 
 ---
 
@@ -214,17 +246,8 @@ PYTHONPATH=src ./.venv/bin/python -m pytest tests -q
 
 ---
 
-## Procedencia
+## Licencia
 
-Dos modelos recibieron la misma tarea. El motor de anonimización, el servidor
-MCP y el manejo documental proceden de la implementación de Claude. La frontera
-de seguridad —raíces autorizadas, sanitizador de salida, códigos de error
-cerrados, validación de firma— y el perfil de Puerto Rico proceden del
-esqueleto de arquitectura de Codex. La documentación de `docs/` es suya.
+MIT.
 
----
-
-Ninguna herramienta detecta el cien por cien de los datos personales. La revisión
-del documento antes de aportarlo, remitirlo o publicarlo corresponde al
-profesional, que conserva su deber de secreto y su responsabilidad bajo el RGPD
-y la LOPDGDD.
+VELUM es una herramienta técnica para reducir riesgo de exposición de información. No constituye asesoramiento jurídico, certificación de privilege, certificación de cumplimiento profesional ni garantía de anonimización absoluta.
