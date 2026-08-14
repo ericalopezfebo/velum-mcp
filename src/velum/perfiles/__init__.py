@@ -1,20 +1,20 @@
-"""Perfiles jurisdiccionales.
+"""Perfiles jurisdiccionales de VELUM.
 
 Un perfil amplía los detectores y el léxico base con lo propio de una
 jurisdicción. Nunca los sustituye: un escrito puertorriqueño puede citar
-jurisprudencia local, federal y española en el mismo párrafo.
+jurisprudencia local y federal en el mismo párrafo.
 
-Detectar no es proteger. Las referencias legales que un perfil aporta
-—TSPR, DPR, KLAN, números de caso— se detectan para PRESERVARLAS.
+Detectar no es proteger. Las referencias legales que un perfil aporta se
+detectan para preservar el contenido jurídico que el abogado decida conservar.
 """
 
 from __future__ import annotations
 
 import os
 
-JURISDICCIONES = ("ESPANA", "ESTADOS_UNIDOS", "PUERTO_RICO")
+JURISDICCIONES = ("ESTADOS_UNIDOS", "PUERTO_RICO")
 VARIABLE_ENTORNO = "VELUM_JURISDICCION"
-POR_DEFECTO = "ESPANA"
+POR_DEFECTO = "PUERTO_RICO"
 
 _instalada: str | None = None
 
@@ -35,16 +35,10 @@ def instalar(jurisdiccion: str | None = None) -> str:
 
     if elegida in ("ESTADOS_UNIDOS", "PUERTO_RICO"):
         from . import estados_unidos
-
         estados_unidos.instalar()
 
     if elegida == "PUERTO_RICO":
-        # Puerto Rico se apila SOBRE Estados Unidos, no en su lugar. El foro
-        # federal del Distrito de Puerto Rico y el Primer Circuito son parte
-        # ordinaria de la práctica local, y un mismo escrito cita el Código
-        # Civil de Puerto Rico junto a 42 U.S.C. § 1983 sin pestañear.
         from . import puerto_rico
-
         puerto_rico.instalar()
 
     _instalada = elegida
