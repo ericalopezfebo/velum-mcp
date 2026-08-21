@@ -9,13 +9,13 @@ Adaptado de la clase AuthorizedRoots del esqueleto de seguridad de Codex.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
 from .errores import CodigoError, ErrorSeguro
 
 VARIABLE_ENTORNO = "VELUM_RAICES"
-RAICES_POR_DEFECTO = ("~/Documents",)
 
 
 class RaicesAutorizadas:
@@ -39,10 +39,25 @@ class RaicesAutorizadas:
 
     @classmethod
     def desde_entorno(cls) -> RaicesAutorizadas:
-        crudo = os.environ.get(VARIABLE_ENTORNO, "")
-        declaradas = [p for p in (t.strip() for t in crudo.split(os.pathsep)) if p]
-        candidatas = declaradas or list(RAICES_POR_DEFECTO)
-        return cls({Path(p) for p in candidatas})
+        crudo = os.environ.get(VARIABLE_ENTORNO, "").strip()
+        if not crudo:
+            raise ValueError("VELUM_RAICES debe configurarse explícitamente")
+        declaradas: list[str]
+        if crudo.startswith("["):
+            try:
+                decoded = json.loads(crudo)
+            except json.JSONDecodeError as error:
+                raise ValueError("VELUM_RAICES no contiene JSON válido") from error
+            if not isinstance(decoded, list) or not all(
+                isinstance(item, str) and item.strip() for item in decoded
+            ):
+                raise ValueError("VELUM_RAICES debe ser una lista de rutas")
+            declaradas = [item.strip() for item in decoded]
+        else:
+            declaradas = [
+                item for item in (part.strip() for part in crudo.split(os.pathsep)) if item
+            ]
+        return cls({Path(path) for path in declaradas})
 
     @property
     def entradas(self) -> tuple[str, ...]:
